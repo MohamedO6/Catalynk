@@ -23,9 +23,11 @@ import {
   MapPin,
   Link,
   X,
+  CheckCircle,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const categories = [
   'FinTech', 'HealthTech', 'EdTech', 'CleanTech', 'AI/ML', 'Blockchain',
@@ -88,11 +90,13 @@ export default function CreateProject() {
   };
 
   const selectImage = () => {
-    // Simulate image selection
+    // Simulate image selection with sample images
     const sampleImages = [
       'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
       'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
       'https://images.pexels.com/photos/3184293/pexels-photo-3184293.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+      'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+      'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
     ];
     setSelectedImage(sampleImages[Math.floor(Math.random() * sampleImages.length)]);
   };
@@ -138,23 +142,65 @@ export default function CreateProject() {
       return;
     }
 
+    if (!profile?.id) {
+      Alert.alert('Error', 'You must be logged in to create a project.');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      // Simulate project creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const projectData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        founder_id: profile.id,
+        funding_goal: formData.fundingGoal ? parseFloat(formData.fundingGoal) : 0,
+        current_funding: 0,
+        funding_stage: formData.fundingStage,
+        team_size: formData.teamSize ? parseInt(formData.teamSize) : 1,
+        location: formData.location || null,
+        website: formData.website || null,
+        tags: formData.tags,
+        image_url: selectedImage,
+        has_audio: hasAudio,
+        has_video: hasVideo,
+        problem: formData.problem,
+        solution: formData.solution,
+        market: formData.market,
+        competition: formData.competition || null,
+        business_model: formData.businessModel,
+        traction: formData.traction || null,
+        pitch: formData.pitch || null,
+        status: 'active',
+      };
+
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([projectData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating project:', error);
+        Alert.alert('Error', 'Failed to create project. Please try again.');
+        return;
+      }
+
       Alert.alert(
         'Project Created!',
         'Your project has been successfully created and is now live on the platform.',
         [
           {
             text: 'View Project',
-            onPress: () => router.replace('/(tabs)/projects')
+            onPress: () => {
+              router.replace('/(tabs)/projects');
+            }
           }
         ]
       );
     } catch (error) {
+      console.error('Error:', error);
       Alert.alert('Error', 'Failed to create project. Please try again.');
     } finally {
       setLoading(false);
@@ -443,7 +489,11 @@ export default function CreateProject() {
             style={[styles.aiButton, hasAudio && styles.aiButtonActive]}
             onPress={generateAudio}
           >
-            <Volume2 size={20} color={hasAudio ? '#FFFFFF' : colors.textSecondary} />
+            {hasAudio ? (
+              <CheckCircle size={20} color="#FFFFFF" />
+            ) : (
+              <Volume2 size={20} color={colors.textSecondary} />
+            )}
             <Text style={[styles.aiButtonText, hasAudio && styles.aiButtonTextActive]}>
               {hasAudio ? 'Audio Generated' : 'Generate Audio Pitch'}
             </Text>
@@ -453,7 +503,11 @@ export default function CreateProject() {
             style={[styles.aiButton, hasVideo && styles.aiButtonActive]}
             onPress={generateVideo}
           >
-            <Play size={20} color={hasVideo ? '#FFFFFF' : colors.textSecondary} />
+            {hasVideo ? (
+              <CheckCircle size={20} color="#FFFFFF" />
+            ) : (
+              <Play size={20} color={colors.textSecondary} />
+            )}
             <Text style={[styles.aiButtonText, hasVideo && styles.aiButtonTextActive]}>
               {hasVideo ? 'Video Generated' : 'Generate Video Intro'}
             </Text>

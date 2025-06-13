@@ -8,8 +8,10 @@ import {
   TextInput,
   Dimensions,
   Image,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import {
   Search,
   Plus,
@@ -22,12 +24,50 @@ import {
   Volume2,
   VolumeX,
   Crown,
+  Heart,
+  MessageCircle,
+  Share2,
+  Star,
+  MapPin,
+  Clock,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  founder_id: string;
+  funding_goal: number;
+  current_funding: number;
+  location?: string;
+  image_url?: string;
+  has_audio: boolean;
+  has_video: boolean;
+  created_at: string;
+  profiles: {
+    full_name: string;
+    avatar_url?: string;
+  };
+}
+
+interface AIMatch {
+  id: string;
+  type: 'freelancer' | 'investor';
+  name: string;
+  title: string;
+  skills?: string[];
+  focus?: string[];
+  rating?: number;
+  portfolio?: number;
+  avatar: string;
+  matchScore: number;
+}
 
 const mockStats = {
   totalProjects: 1247,
@@ -36,55 +76,7 @@ const mockStats = {
   successRate: 78,
 };
 
-const mockTrendingProjects = [
-  {
-    id: '1',
-    title: 'EcoTrack: Sustainable Living Assistant',
-    description: 'AI-powered app to help users track and reduce their carbon footprint through personalized recommendations and gamification.',
-    category: 'Sustainability',
-    founder: 'Sarah Chen',
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-    image: 'https://images.pexels.com/photos/1108572/pexels-photo-1108572.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    funding: 45000,
-    target: 100000,
-    progress: 45,
-    members: 8,
-    hasAudio: true,
-    hasVideo: true,
-  },
-  {
-    id: '2',
-    title: 'MedConnect: Telemedicine Platform',
-    description: 'Connecting patients with healthcare providers through secure video consultations and AI-powered symptom analysis.',
-    category: 'Healthcare',
-    founder: 'Dr. Marcus Johnson',
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-    image: 'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    funding: 120000,
-    target: 200000,
-    progress: 60,
-    members: 12,
-    hasAudio: true,
-    hasVideo: false,
-  },
-  {
-    id: '3',
-    title: 'EduGame: Gamified Learning Platform',
-    description: 'Making education fun through interactive games, AR experiences, and personalized learning paths for students.',
-    category: 'Education',
-    founder: 'Emily Rodriguez',
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-    image: 'https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    funding: 32000,
-    target: 75000,
-    progress: 43,
-    members: 6,
-    hasAudio: false,
-    hasVideo: true,
-  },
-];
-
-const mockAIMatches = [
+const mockAIMatches: AIMatch[] = [
   {
     id: '1',
     type: 'freelancer',
@@ -112,6 +104,40 @@ export default function Home() {
   const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrendingProjects();
+  }, []);
+
+  const fetchTrendingProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          profiles:founder_id (
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error fetching projects:', error);
+        return;
+      }
+
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getDashboardTitle = () => {
     switch (profile?.role) {
@@ -141,6 +167,10 @@ export default function Home() {
   };
 
   const handleCreateProject = () => {
+    if (profile?.role !== 'founder') {
+      Alert.alert('Access Restricted', 'Only founders can create projects. Please update your profile role.');
+      return;
+    }
     router.push('/create-project');
   };
 
@@ -149,17 +179,43 @@ export default function Home() {
       setAudioPlaying(null);
     } else {
       setAudioPlaying(projectId);
+      Alert.alert('Audio Playing', 'Playing AI-generated pitch audio...');
       // Simulate audio playback
       setTimeout(() => setAudioPlaying(null), 5000);
     }
   };
 
   const handlePlayVideo = (projectId: string) => {
-    router.push(`/project-video/${projectId}`);
+    Alert.alert('Video Playing', 'Opening AI-generated video introduction...');
+    // In a real app, this would open a video player
   };
 
   const handleUpgradeToPro = () => {
     router.push('/upgrade');
+  };
+
+  const handleProjectPress = (projectId: string) => {
+    router.push(`/project/${projectId}`);
+  };
+
+  const handleConnectMatch = (matchId: string) => {
+    Alert.alert('Connection Request', 'Connection request sent! They will be notified.');
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push(`/projects?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `$${amount.toLocaleString()}`;
+    }
   };
 
   const styles = StyleSheet.create({
@@ -234,6 +290,9 @@ export default function Home() {
       color: colors.text,
       paddingVertical: 12,
       marginLeft: 12,
+    },
+    searchButton: {
+      padding: 8,
     },
     quickActions: {
       flexDirection: 'row',
@@ -359,6 +418,7 @@ export default function Home() {
       height: 24,
       borderRadius: 12,
       marginRight: 8,
+      backgroundColor: colors.primary,
     },
     founderName: {
       fontSize: 14,
@@ -515,17 +575,14 @@ export default function Home() {
       fontFamily: 'Inter-SemiBold',
       color: '#FFFFFF',
     },
+    loadingText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 40,
+    },
   });
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
-    } else {
-      return `$${amount}`;
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -559,7 +616,11 @@ export default function Home() {
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
           />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Search size={16} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -597,84 +658,110 @@ export default function Home() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Trending Projects</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/projects')}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(tabs)/projects')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
 
-          {mockTrendingProjects.map((project) => (
-            <TouchableOpacity key={project.id} style={styles.projectCard}>
-              <Image source={{ uri: project.image }} style={styles.projectImage} />
-              
-              <View style={styles.projectContent}>
-                <View style={styles.projectHeader}>
-                  <Text style={styles.projectTitle}>{project.title}</Text>
-                  <View style={styles.projectActions}>
-                    {project.hasAudio && (
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handlePlayAudio(project.id)}
-                      >
-                        {audioPlaying === project.id ? (
-                          <VolumeX size={18} color={colors.primary} />
-                        ) : (
-                          <Volume2 size={18} color={colors.textSecondary} />
-                        )}
-                      </TouchableOpacity>
-                    )}
-                    {project.hasVideo && (
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handlePlayVideo(project.id)}
-                      >
-                        <Play size={18} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
+          {loading ? (
+            <Text style={styles.loadingText}>Loading projects...</Text>
+          ) : projects.length === 0 ? (
+            <Text style={styles.loadingText}>No projects found</Text>
+          ) : (
+            projects.map((project) => {
+              const progress = project.funding_goal > 0 
+                ? Math.round((project.current_funding / project.funding_goal) * 100)
+                : 0;
 
-                <View style={styles.projectFounder}>
-                  <Image source={{ uri: project.avatar }} style={styles.founderAvatar} />
-                  <Text style={styles.founderName}>by {project.founder}</Text>
-                </View>
-
-                <Text style={styles.projectDescription}>{project.description}</Text>
-
-                <View style={styles.projectMeta}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{project.category}</Text>
-                  </View>
+              return (
+                <TouchableOpacity 
+                  key={project.id} 
+                  style={styles.projectCard}
+                  onPress={() => handleProjectPress(project.id)}
+                >
+                  {project.image_url && (
+                    <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+                  )}
                   
-                  <View style={styles.projectStats}>
-                    <View style={styles.projectStat}>
-                      <Users size={14} color={colors.textSecondary} />
-                      <Text style={styles.projectStatText}>{project.members}</Text>
+                  <View style={styles.projectContent}>
+                    <View style={styles.projectHeader}>
+                      <Text style={styles.projectTitle}>{project.title}</Text>
+                      <View style={styles.projectActions}>
+                        {project.has_audio && (
+                          <TouchableOpacity 
+                            style={styles.actionButton}
+                            onPress={() => handlePlayAudio(project.id)}
+                          >
+                            {audioPlaying === project.id ? (
+                              <VolumeX size={18} color={colors.primary} />
+                            ) : (
+                              <Volume2 size={18} color={colors.textSecondary} />
+                            )}
+                          </TouchableOpacity>
+                        )}
+                        {project.has_video && (
+                          <TouchableOpacity 
+                            style={styles.actionButton}
+                            onPress={() => handlePlayVideo(project.id)}
+                          >
+                            <Play size={18} color={colors.textSecondary} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                </View>
 
-                <View style={styles.fundingContainer}>
-                  <View style={styles.fundingHeader}>
-                    <Text style={styles.fundingAmount}>
-                      {formatCurrency(project.funding)} raised
-                    </Text>
-                    <Text style={styles.fundingTarget}>
-                      of {formatCurrency(project.target)} goal
-                    </Text>
+                    <View style={styles.projectFounder}>
+                      {project.profiles?.avatar_url ? (
+                        <Image source={{ uri: project.profiles.avatar_url }} style={styles.founderAvatar} />
+                      ) : (
+                        <View style={styles.founderAvatar} />
+                      )}
+                      <Text style={styles.founderName}>by {project.profiles?.full_name || 'Unknown'}</Text>
+                    </View>
+
+                    <Text style={styles.projectDescription}>{project.description}</Text>
+
+                    <View style={styles.projectMeta}>
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryText}>{project.category}</Text>
+                      </View>
+                      
+                      <View style={styles.projectStats}>
+                        {project.location && (
+                          <View style={styles.projectStat}>
+                            <MapPin size={14} color={colors.textSecondary} />
+                            <Text style={styles.projectStatText}>{project.location}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {project.funding_goal > 0 && (
+                      <View style={styles.fundingContainer}>
+                        <View style={styles.fundingHeader}>
+                          <Text style={styles.fundingAmount}>
+                            {formatCurrency(project.current_funding)} raised
+                          </Text>
+                          <Text style={styles.fundingTarget}>
+                            of {formatCurrency(project.funding_goal)} goal
+                          </Text>
+                        </View>
+                        <View style={styles.progressBar}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              { width: `${Math.min(progress, 100)}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.progressText}>{progress}% funded</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${project.progress}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.progressText}>{project.progress}% funded</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         <View style={styles.section}>
@@ -709,7 +796,10 @@ export default function Home() {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.connectButton}>
+                <TouchableOpacity 
+                  style={styles.connectButton}
+                  onPress={() => handleConnectMatch(match.id)}
+                >
                   <Text style={styles.connectButtonText}>Connect</Text>
                 </TouchableOpacity>
               </View>

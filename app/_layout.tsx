@@ -34,6 +34,13 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="create-project" options={{ headerShown: false }} />
+            <Stack.Screen name="upgrade" options={{ headerShown: false }} />
+            <Stack.Screen name="project/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="community/create" options={{ headerShown: false }} />
+            <Stack.Screen name="investment/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
         )}
