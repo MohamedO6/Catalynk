@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Crown, Check, Zap, Users, MessageCircle, BarChart3, Shield, Sparkles, Rocket } from 'lucide-react-native';
+import { ArrowLeft, Crown, Check, Zap, Users, MessageCircle, ChartBar as BarChart3, Shield, Sparkles, Rocket } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
