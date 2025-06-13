@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -21,66 +22,34 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
-const mockIdeas = [
-  {
-    id: '1',
-    title: 'AI-Powered Sock Matcher',
-    description: 'Never lose a sock again! Our AI analyzes your laundry patterns and predicts which socks will go missing, automatically ordering replacements.',
-    category: 'AI/Lifestyle',
-    image: 'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-    fundingGoal: 50000,
-    difficulty: 'Easy',
-    marketSize: 'Small',
-    votes: { pitch: 234, ditch: 156 },
-  },
-  {
-    id: '2',
-    title: 'Blockchain-Based Pet Translator',
-    description: 'Decode what your pets are really thinking with our revolutionary blockchain-secured neural network that translates barks, meows, and chirps into human language.',
-    category: 'Blockchain/Pets',
-    image: 'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-    fundingGoal: 500000,
-    difficulty: 'Impossible',
-    marketSize: 'Huge',
-    votes: { pitch: 89, ditch: 445 },
-  },
-  {
-    id: '3',
-    title: 'Subscription Box for Air',
-    description: 'Premium air from exotic locations delivered monthly. Each bottle contains authentic atmosphere from places like Mount Everest, Amazon Rainforest, or Paris cafés.',
-    category: 'Subscription/Wellness',
-    image: 'https://images.pexels.com/photos/1108572/pexels-photo-1108572.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-    fundingGoal: 100000,
-    difficulty: 'Medium',
-    marketSize: 'Medium',
-    votes: { pitch: 167, ditch: 298 },
-  },
-  {
-    id: '4',
-    title: 'Dating App for Plants',
-    description: 'Help your houseplants find love! Our app uses advanced botany algorithms to match compatible plants for optimal growth and happiness.',
-    category: 'Dating/Plants',
-    image: 'https://images.pexels.com/photos/1084199/pexels-photo-1084199.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-    fundingGoal: 25000,
-    difficulty: 'Easy',
-    marketSize: 'Niche',
-    votes: { pitch: 312, ditch: 123 },
-  },
-  {
-    id: '5',
-    title: 'Time Travel Insurance',
-    description: 'Protect yourself from temporal paradoxes and timeline disruptions. Our comprehensive coverage includes butterfly effect protection and grandfather clause coverage.',
-    category: 'Insurance/Sci-Fi',
-    image: 'https://images.pexels.com/photos/1181263/pexels-photo-1181263.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-    fundingGoal: 1000000,
-    difficulty: 'Impossible',
-    marketSize: 'Infinite',
-    votes: { pitch: 78, ditch: 567 },
-  },
-];
+interface GameIdea {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  funding_goal: number;
+  difficulty: string;
+  market_size: string;
+  image_url?: string;
+  pitch_votes: number;
+  ditch_votes: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface GameScore {
+  id: string;
+  user_id: string;
+  total_score: number;
+  total_votes: number;
+  accuracy: number;
+  best_streak: number;
+  current_streak: number;
+}
 
 const mockLeaderboard = [
   { rank: 1, name: 'Sarah Chen', score: 2847, avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop' },
@@ -93,62 +62,156 @@ export default function PitchOrDitchGame() {
   const { colors } = useTheme();
   const { profile } = useAuth();
   const [currentIdeaIndex, setCurrentIdeaIndex] = useState(0);
-  const [userScore, setUserScore] = useState(1834);
-  const [streak, setStreak] = useState(0);
+  const [gameIdeas, setGameIdeas] = useState<GameIdea[]>([]);
+  const [userScore, setUserScore] = useState<GameScore | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showResult, setShowResult] = useState(false);
   const [lastVote, setLastVote] = useState<'pitch' | 'ditch' | null>(null);
-  const [gameStats, setGameStats] = useState({
-    totalVotes: 156,
-    accuracy: 73,
-    bestStreak: 12,
-  });
 
-  const currentIdea = mockIdeas[currentIdeaIndex];
+  useEffect(() => {
+    fetchGameIdeas();
+    fetchUserScore();
+  }, []);
 
-  const handleVote = (vote: 'pitch' | 'ditch') => {
+  const fetchGameIdeas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('game_ideas')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching game ideas:', error);
+        return;
+      }
+
+      setGameIdeas(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserScore = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('game_scores')
+        .select('*')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user score:', error);
+        return;
+      }
+
+      if (data) {
+        setUserScore(data);
+      } else {
+        // Create initial score record
+        const { data: newScore, error: createError } = await supabase
+          .from('game_scores')
+          .insert({
+            user_id: profile.id,
+            total_score: 0,
+            total_votes: 0,
+            accuracy: 0,
+            best_streak: 0,
+            current_streak: 0,
+          })
+          .select()
+          .single();
+
+        if (!createError && newScore) {
+          setUserScore(newScore);
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleVote = async (vote: 'pitch' | 'ditch') => {
+    if (!profile?.id || gameIdeas.length === 0) {
+      Alert.alert('Login Required', 'Please log in to play the game.');
+      return;
+    }
+
+    const currentIdea = gameIdeas[currentIdeaIndex];
     setLastVote(vote);
     setShowResult(true);
-    
-    // Calculate points based on vote and community consensus
-    const totalVotes = currentIdea.votes.pitch + currentIdea.votes.ditch;
-    const majorityVote = currentIdea.votes.pitch > currentIdea.votes.ditch ? 'pitch' : 'ditch';
-    const isCorrect = vote === majorityVote;
-    
-    let points = 10; // Base points
-    if (isCorrect) {
-      points += 15; // Bonus for matching majority
-      setStreak(prev => prev + 1);
-    } else {
-      setStreak(0);
-    }
-    
-    // Streak bonus
-    if (streak >= 5) points += 5;
-    if (streak >= 10) points += 10;
-    
-    setUserScore(prev => prev + points);
-    setGameStats(prev => ({
-      ...prev,
-      totalVotes: prev.totalVotes + 1,
-      accuracy: isCorrect ? Math.min(100, prev.accuracy + 1) : Math.max(0, prev.accuracy - 1),
-      bestStreak: Math.max(prev.bestStreak, streak + (isCorrect ? 1 : 0)),
-    }));
 
-    setTimeout(() => {
-      nextIdea();
-    }, 2000);
+    try {
+      // Record the vote
+      await supabase
+        .from('game_votes')
+        .upsert({
+          user_id: profile.id,
+          idea_id: currentIdea.id,
+          vote_type: vote,
+        });
+
+      // Calculate points based on vote and community consensus
+      const totalVotes = currentIdea.pitch_votes + currentIdea.ditch_votes;
+      const majorityVote = currentIdea.pitch_votes > currentIdea.ditch_votes ? 'pitch' : 'ditch';
+      const isCorrect = vote === majorityVote;
+      
+      let points = 10; // Base points
+      if (isCorrect) {
+        points += 15; // Bonus for matching majority
+      }
+      
+      // Update user score
+      if (userScore) {
+        const newStreak = isCorrect ? userScore.current_streak + 1 : 0;
+        const newAccuracy = Math.round(((userScore.accuracy * userScore.total_votes) + (isCorrect ? 100 : 0)) / (userScore.total_votes + 1));
+        
+        await supabase
+          .from('game_scores')
+          .update({
+            total_score: userScore.total_score + points,
+            total_votes: userScore.total_votes + 1,
+            accuracy: newAccuracy,
+            best_streak: Math.max(userScore.best_streak, newStreak),
+            current_streak: newStreak,
+          })
+          .eq('user_id', profile.id);
+
+        setUserScore({
+          ...userScore,
+          total_score: userScore.total_score + points,
+          total_votes: userScore.total_votes + 1,
+          accuracy: newAccuracy,
+          best_streak: Math.max(userScore.best_streak, newStreak),
+          current_streak: newStreak,
+        });
+      }
+
+      setTimeout(() => {
+        nextIdea();
+      }, 2000);
+    } catch (error) {
+      console.error('Error recording vote:', error);
+      Alert.alert('Error', 'Failed to record vote. Please try again.');
+    }
   };
 
   const nextIdea = () => {
     setShowResult(false);
     setLastVote(null);
-    setCurrentIdeaIndex((prev) => (prev + 1) % mockIdeas.length);
+    setCurrentIdeaIndex((prev) => (prev + 1) % gameIdeas.length);
   };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case 'easy': return colors.success;
       case 'medium': return colors.warning;
+      case 'hard': return colors.error;
       case 'impossible': return colors.error;
       default: return colors.textSecondary;
     }
@@ -161,11 +224,22 @@ export default function PitchOrDitchGame() {
         return <Users size={16} color={colors.textSecondary} />;
       case 'medium':
         return <TrendingUp size={16} color={colors.warning} />;
+      case 'large':
       case 'huge':
       case 'infinite':
         return <Star size={16} color={colors.success} />;
       default:
         return <Users size={16} color={colors.textSecondary} />;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `$${amount}`;
     }
   };
 
@@ -486,17 +560,32 @@ export default function PitchOrDitchGame() {
       color: colors.warning,
       marginLeft: 4,
     },
+    loadingText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 100,
+    },
   });
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
-    } else {
-      return `$${amount}`;
-    }
-  };
+  if (loading || gameIdeas.length === 0) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[colors.warning + '10', colors.background]}
+          style={styles.header}
+        >
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>Pitch or Ditch</Text>
+          </View>
+        </LinearGradient>
+        <Text style={styles.loadingText}>Loading game ideas...</Text>
+      </View>
+    );
+  }
+
+  const currentIdea = gameIdeas[currentIdeaIndex];
 
   return (
     <View style={styles.container}>
@@ -507,37 +596,39 @@ export default function PitchOrDitchGame() {
         <View style={styles.headerTop}>
           <Text style={styles.title}>Pitch or Ditch</Text>
           <View style={styles.scoreContainer}>
-            <Text style={styles.score}>{userScore.toLocaleString()}</Text>
+            <Text style={styles.score}>{userScore?.total_score?.toLocaleString() || '0'}</Text>
             <Text style={styles.scoreLabel}>Points</Text>
           </View>
         </View>
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{gameStats.totalVotes}</Text>
+            <Text style={styles.statValue}>{userScore?.total_votes || 0}</Text>
             <Text style={styles.statLabel}>Total Votes</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{gameStats.accuracy}%</Text>
+            <Text style={styles.statValue}>{userScore?.accuracy || 0}%</Text>
             <Text style={styles.statLabel}>Accuracy</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{gameStats.bestStreak}</Text>
+            <Text style={styles.statValue}>{userScore?.best_streak || 0}</Text>
             <Text style={styles.statLabel}>Best Streak</Text>
           </View>
         </View>
       </LinearGradient>
 
       <ScrollView style={styles.gameContainer} showsVerticalScrollIndicator={false}>
-        {streak > 0 && (
+        {userScore && userScore.current_streak > 0 && (
           <View style={styles.streakContainer}>
             <Zap size={16} color={colors.warning} />
-            <Text style={styles.streakText}>{streak} Vote Streak!</Text>
+            <Text style={styles.streakText}>{userScore.current_streak} Vote Streak!</Text>
           </View>
         )}
 
         <View style={styles.ideaCard}>
-          <Image source={{ uri: currentIdea.image }} style={styles.ideaImage} />
+          {currentIdea.image_url && (
+            <Image source={{ uri: currentIdea.image_url }} style={styles.ideaImage} />
+          )}
           
           <View style={styles.ideaContent}>
             <View style={styles.ideaHeader}>
@@ -551,7 +642,7 @@ export default function PitchOrDitchGame() {
 
             <View style={styles.ideaMetrics}>
               <View style={styles.metricItem}>
-                <Text style={styles.metricValue}>{formatCurrency(currentIdea.fundingGoal)}</Text>
+                <Text style={styles.metricValue}>{formatCurrency(currentIdea.funding_goal)}</Text>
                 <Text style={styles.metricLabel}>Funding Goal</Text>
               </View>
               <View style={styles.metricItem}>
@@ -570,8 +661,8 @@ export default function PitchOrDitchGame() {
               </View>
               <View style={styles.metricItem}>
                 <View style={styles.marketSizeContainer}>
-                  {getMarketSizeIcon(currentIdea.marketSize)}
-                  <Text style={styles.marketSizeText}>{currentIdea.marketSize}</Text>
+                  {getMarketSizeIcon(currentIdea.market_size)}
+                  <Text style={styles.marketSizeText}>{currentIdea.market_size}</Text>
                 </View>
                 <Text style={styles.metricLabel}>Market Size</Text>
               </View>
@@ -602,13 +693,13 @@ export default function PitchOrDitchGame() {
               <View style={styles.voteBreakdown}>
                 <View style={styles.voteItem}>
                   <Text style={[styles.voteCount, { color: colors.success }]}>
-                    {currentIdea.votes.pitch}
+                    {currentIdea.pitch_votes}
                   </Text>
                   <Text style={styles.voteLabel}>Pitch</Text>
                 </View>
                 <View style={styles.voteItem}>
                   <Text style={[styles.voteCount, { color: colors.error }]}>
-                    {currentIdea.votes.ditch}
+                    {currentIdea.ditch_votes}
                   </Text>
                   <Text style={styles.voteLabel}>Ditch</Text>
                 </View>
@@ -656,22 +747,22 @@ export default function PitchOrDitchGame() {
               {lastVote === 'pitch' ? 'PITCHED!' : 'DITCHED!'}
             </Text>
             <Text style={styles.resultSubtitle}>
-              {((lastVote === 'pitch' && currentIdea.votes.pitch > currentIdea.votes.ditch) ||
-                (lastVote === 'ditch' && currentIdea.votes.ditch > currentIdea.votes.pitch))
+              {((lastVote === 'pitch' && currentIdea.pitch_votes > currentIdea.ditch_votes) ||
+                (lastVote === 'ditch' && currentIdea.ditch_votes > currentIdea.pitch_votes))
                 ? 'You matched the majority! +25 points'
                 : 'Different from majority, but that\'s okay! +10 points'}
             </Text>
             <View style={styles.resultStats}>
               <View style={styles.resultStatItem}>
                 <Text style={styles.resultStatValue}>+{
-                  ((lastVote === 'pitch' && currentIdea.votes.pitch > currentIdea.votes.ditch) ||
-                   (lastVote === 'ditch' && currentIdea.votes.ditch > currentIdea.votes.pitch))
+                  ((lastVote === 'pitch' && currentIdea.pitch_votes > currentIdea.ditch_votes) ||
+                   (lastVote === 'ditch' && currentIdea.ditch_votes > currentIdea.pitch_votes))
                     ? '25' : '10'
                 }</Text>
                 <Text style={styles.resultStatLabel}>Points</Text>
               </View>
               <View style={styles.resultStatItem}>
-                <Text style={styles.resultStatValue}>{streak + 1}</Text>
+                <Text style={styles.resultStatValue}>{(userScore?.current_streak || 0) + 1}</Text>
                 <Text style={styles.resultStatLabel}>Streak</Text>
               </View>
             </View>
