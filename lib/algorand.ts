@@ -14,7 +14,6 @@ export const mintPodcastNFT = async (
   videoUrl?: string
 ) => {
   try {
-    // Create NFT metadata
     const metadata = {
       name: podcastTitle,
       description: podcastDescription,
@@ -28,12 +27,6 @@ export const mintPodcastNFT = async (
       }
     };
 
-    // In a real implementation, this would:
-    // 1. Upload metadata to IPFS
-    // 2. Create and sign the NFT transaction
-    // 3. Submit to Algorand network
-    
-    // For demo purposes, return a mock NFT
     const nftId = `nft_${Date.now()}`;
     
     return {
@@ -44,21 +37,6 @@ export const mintPodcastNFT = async (
     };
   } catch (error) {
     console.error('Error minting NFT:', error);
-    return { success: false, error };
-  }
-};
-
-export const getPodcastNFTs = async (ownerAddress: string) => {
-  try {
-    // In a real implementation, this would query the Algorand blockchain
-    // for NFTs owned by the address
-    
-    return {
-      success: true,
-      nfts: []
-    };
-  } catch (error) {
-    console.error('Error fetching NFTs:', error);
     return { success: false, error };
   }
 };

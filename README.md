@@ -135,7 +135,7 @@ CREATE POLICY "Users can update own posts" ON community_posts FOR UPDATE USING (
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
 ## 🎯 Key Features Implementation

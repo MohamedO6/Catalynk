@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Crown, Check, Zap, Users, MessageCircle, ChartBar as BarChart3, Shield, Sparkles, Rocket } from 'lucide-react-native';
+import { ArrowLeft, Crown, Check, Zap, Users, MessageCircle, BarChart3, Shield, Sparkles, Rocket } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -22,86 +22,69 @@ const plans = [
     period: 'forever',
     description: 'Perfect for getting started',
     features: [
-      'Create up to 3 projects',
-      'Basic community access',
-      'Standard matching',
-      'Email support',
+      'Create up to 5-minute episodes',
+      'Basic AI script generation',
+      'Community access',
+      'Standard audio quality',
     ],
     limitations: [
-      'Limited AI features',
-      'No priority support',
-      'Basic analytics',
+      'No voice AI features',
+      'No video generation',
+      'Limited episode length',
     ],
   },
   {
     id: 'pro',
-    name: 'Catalynk Pro',
+    name: 'PodSnap Pro',
     price: 29,
     period: 'month',
     description: 'Unlock your full potential',
     features: [
-      'Unlimited projects',
-      'AI-powered matching',
+      'Unlimited episode length',
+      'Premium voice AI (ElevenLabs)',
+      'Video AI generation (Tavus)',
+      'Advanced script generation',
+      'NFT minting on Algorand',
+      'Custom domain creation',
       'Priority community access',
       'Advanced analytics',
-      'Voice AI pitch generation',
-      'Video AI introductions',
-      'Blockchain escrow access',
       'Priority support',
       'Early access to new features',
-      'Verified badge',
     ],
     popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 99,
-    period: 'month',
-    description: 'For teams and organizations',
-    features: [
-      'Everything in Pro',
-      'Team collaboration tools',
-      'Custom branding',
-      'API access',
-      'Dedicated account manager',
-      'Custom integrations',
-      'Advanced security',
-      'SLA guarantee',
-    ],
   },
 ];
 
 const proFeatures = [
   {
     icon: Sparkles,
-    title: 'AI-Powered Matching',
-    description: 'Get matched with the perfect co-founders, freelancers, and investors using our advanced AI algorithms.',
+    title: 'Advanced AI Script Generation',
+    description: 'Get more sophisticated and engaging podcast scripts with GPT-4 powered generation.',
   },
   {
     icon: MessageCircle,
-    title: 'Voice AI Pitch Generation',
-    description: 'Convert your project descriptions into professional audio pitches using ElevenLabs voice synthesis.',
+    title: 'Voice AI with ElevenLabs',
+    description: 'Convert your scripts into natural-sounding voiceovers with premium voice options.',
   },
   {
     icon: Rocket,
-    title: 'Video AI Introductions',
-    description: 'Create personalized video introductions for your projects using Tavus AI video generation.',
+    title: 'Video AI with Tavus',
+    description: 'Create personalized video introductions for your podcasts using AI avatars.',
   },
   {
     icon: Shield,
-    title: 'Blockchain Escrow',
-    description: 'Secure your investments and payments with Algorand blockchain-based smart contracts.',
+    title: 'NFT Publishing on Algorand',
+    description: 'Mint your podcast episodes as NFTs on the Algorand blockchain for ownership and monetization.',
   },
   {
     icon: BarChart3,
     title: 'Advanced Analytics',
-    description: 'Track your project performance, engagement metrics, and funding progress with detailed insights.',
+    description: 'Track your podcast performance with detailed insights and engagement metrics.',
   },
   {
     icon: Users,
-    title: 'Priority Community',
-    description: 'Get featured placement in community discussions and priority access to networking events.',
+    title: 'Custom Domain Creation',
+    description: 'Get your own podcast website with Entri domain services (username.mypodsnap.tech).',
   },
 ];
 
@@ -121,7 +104,7 @@ export default function Upgrade() {
     setLoading(true);
     
     try {
-      // Simulate payment processing
+      // Simulate payment processing with RevenueCat
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       Alert.alert(
@@ -407,7 +390,7 @@ export default function Upgrade() {
           </View>
           <Text style={styles.heroTitle}>Unlock Your Full Potential</Text>
           <Text style={styles.heroSubtitle}>
-            Get access to AI-powered features, blockchain escrow, and premium tools to accelerate your startup journey
+            Get access to AI-powered features, blockchain publishing, and premium tools to create professional podcasts
           </Text>
         </LinearGradient>
 
@@ -512,7 +495,7 @@ export default function Upgrade() {
                   plan.id === 'free' && styles.planButtonTextSecondary
                 ]}>
                   {plan.id === 'free' ? 'Current Plan' : 
-                   profile?.subscription_tier === plan.id ? 'Current Plan' :
+                   profile?.tier === plan.id ? 'Current Plan' :
                    loading ? 'Processing...' : `Upgrade to ${plan.name}`}
                 </Text>
                 {loading && <ActivityIndicator size="small" color="#FFFFFF" />}

@@ -1,11 +1,9 @@
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Chrome as Home, Mic, MessageCircle, User, Crown } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { Home, Mic, MessageCircle, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const { profile } = useAuth();
 
   return (
     <Tabs
