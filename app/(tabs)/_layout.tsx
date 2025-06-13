@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Home, Briefcase, MessageCircle, User, DollarSign } from 'lucide-react-native';
+import { Home, Briefcase, MessageCircle, User, DollarSign, Gamepad2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
@@ -63,6 +63,15 @@ export default function TabLayout() {
           title: 'Community',
           tabBarIcon: ({ size, color }) => (
             <MessageCircle size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="game"
+        options={{
+          title: 'Pitch or Ditch',
+          tabBarIcon: ({ size, color }) => (
+            <Gamepad2 size={size} color={color} />
           ),
         }}
       />
