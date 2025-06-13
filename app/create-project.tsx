@@ -11,20 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import {
-  ArrowLeft,
-  Upload,
-  Play,
-  Volume2,
-  Tag,
-  DollarSign,
-  Users,
-  Calendar,
-  MapPin,
-  Link,
-  X,
-  CheckCircle,
-} from 'lucide-react-native';
+import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
