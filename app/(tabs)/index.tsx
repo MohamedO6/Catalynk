@@ -11,20 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import {
-  Plus,
-  Play,
-  TrendingUp,
-  Users,
-  Crown,
-  Bell,
-  Search,
-  Mic,
-  Video,
-  Share2,
-  Heart,
-  MoreHorizontal,
-} from 'lucide-react-native';
+import { Plus, Play, TrendingUp, Users, Crown, Bell, Search, Mic, Video, Share2, Heart, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
