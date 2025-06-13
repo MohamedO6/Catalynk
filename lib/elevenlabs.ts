@@ -1,6 +1,6 @@
 const ELEVENLABS_API_KEY = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY;
 
-export const generateSpeech = async (text: string, voiceId: string = 'pNInz6obpgDQGcFmaJgB') => {
+export const generateVoiceover = async (text: string, voiceId: string = 'pNInz6obpgDQGcFmaJgB') => {
   try {
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -20,13 +20,13 @@ export const generateSpeech = async (text: string, voiceId: string = 'pNInz6obpg
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate speech');
+      throw new Error('Failed to generate voiceover');
     }
 
     const audioBlob = await response.blob();
     return { success: true, audioBlob };
   } catch (error) {
-    console.error('Error generating speech:', error);
+    console.error('Error generating voiceover:', error);
     return { success: false, error };
   }
 };

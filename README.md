@@ -1,8 +1,37 @@
-# Catalynk Platform
+# PodSnap - AI-Powered Podcast Creation Platform
 
-A comprehensive startup ecosystem platform built with Expo and React Native.
+A revolutionary cross-platform application that lets users create professional podcast episodes using AI — with no microphone or camera required.
 
-## 🚀 Quick Setup
+## 🚀 Features
+
+### Core Functionality
+- **AI Script Generation**: Generate engaging podcast scripts using OpenAI GPT-4
+- **Voice AI**: Convert scripts to natural-sounding voiceovers with ElevenLabs
+- **Video AI**: Create personalized video introductions using Tavus avatars
+- **NFT Publishing**: Mint podcasts as NFTs on Algorand blockchain
+- **Custom Domains**: Create podcast websites with Entri (username.mypodsnap.tech)
+
+### User Tiers
+- **Free**: 5-minute episodes, basic features
+- **Pro**: Unlimited length, premium voices, video generation, analytics
+
+### Community Features
+- Reddit-style feed with upvoting/downvoting
+- Episode sharing and discovery
+- "Roast My Podcast" section for feedback
+- Community discussions and tips
+
+### Technology Stack
+- **Frontend**: React Native with Expo
+- **Authentication**: Supabase Auth with OAuth
+- **Database**: PostgreSQL via Supabase
+- **AI Services**: OpenAI, ElevenLabs, Tavus
+- **Blockchain**: Algorand for NFT minting
+- **Subscriptions**: RevenueCat (mobile) / Stripe (web)
+- **Domains**: Entri + IONOS integration
+- **Deployment**: Netlify (web), TestFlight (iOS), APK (Android)
+
+## 🛠️ Setup Instructions
 
 ### 1. Environment Configuration
 
@@ -11,57 +40,31 @@ A comprehensive startup ecosystem platform built with Expo and React Native.
    cp .env.example .env
    ```
 
-2. Update your `.env` file with your actual Supabase credentials:
+2. Update your `.env` file with your API keys:
    ```env
+   # Supabase
    EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
    EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+   # AI Services
+   EXPO_PUBLIC_ELEVENLABS_API_KEY=your-elevenlabs-key
+   EXPO_PUBLIC_TAVUS_API_KEY=your-tavus-key
+   EXPO_PUBLIC_OPENAI_API_KEY=your-openai-key
+
+   # Blockchain
+   EXPO_PUBLIC_ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
+   EXPO_PUBLIC_ALGORAND_INDEXER_URL=https://testnet-idx.algonode.cloud
+
+   # Domain Services
+   EXPO_PUBLIC_ENTRI_API_KEY=your-entri-key
+
+   # RevenueCat
+   EXPO_PUBLIC_REVENUECAT_API_KEY=your-revenuecat-key
    ```
 
-### 2. Get Your Supabase Credentials
+### 2. Database Setup
 
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your project (or create a new one)
-3. Go to **Settings > API**
-4. Copy your:
-   - **Project URL** (looks like: `https://abcdefghijklmnop.supabase.co`)
-   - **Anon/Public Key** (starts with `eyJ...`)
-
-### 3. Configure OAuth Providers
-
-#### Google OAuth Setup:
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable Google+ API
-4. Go to **APIs & Services > Credentials**
-5. Create **OAuth 2.0 Client ID**
-6. Set **Authorized redirect URIs**:
-   ```
-   https://your-project-ref.supabase.co/auth/v1/callback
-   ```
-7. Copy your **Client ID** and **Client Secret**
-
-#### GitHub OAuth Setup:
-1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
-2. Click **New OAuth App**
-3. Fill in the details:
-   - **Application name**: Catalynk
-   - **Homepage URL**: `http://localhost:8081` (for development)
-   - **Authorization callback URL**: `https://your-project-ref.supabase.co/auth/v1/callback`
-4. Copy your **Client ID** and **Client Secret**
-
-#### Configure in Supabase:
-1. Go to your Supabase Dashboard
-2. Navigate to **Authentication > Providers**
-3. Enable **Google**:
-   - Add your Google Client ID
-   - Add your Google Client Secret
-4. Enable **GitHub**:
-   - Add your GitHub Client ID
-   - Add your GitHub Client Secret
-
-### 4. Database Setup
-
-The app requires a `profiles` table in your Supabase database. Run this SQL in your Supabase SQL Editor:
+Run this SQL in your Supabase SQL Editor:
 
 ```sql
 -- Create profiles table
@@ -70,99 +73,127 @@ CREATE TABLE IF NOT EXISTS profiles (
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
   avatar_url TEXT,
-  role TEXT NOT NULL CHECK (role IN ('founder', 'freelancer', 'investor')),
+  tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'pro')),
   bio TEXT,
-  skills TEXT[],
-  location TEXT,
   website TEXT,
-  linkedin_url TEXT,
-  github_url TEXT,
-  is_verified BOOLEAN DEFAULT FALSE,
-  subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create episodes table
+CREATE TABLE IF NOT EXISTS episodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  script TEXT,
+  creator_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  duration INTEGER DEFAULT 0,
+  audio_url TEXT,
+  video_url TEXT,
+  image_url TEXT,
+  nft_id TEXT,
+  plays INTEGER DEFAULT 0,
+  likes INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create community_posts table
+CREATE TABLE IF NOT EXISTS community_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT,
+  type TEXT DEFAULT 'discussion' CHECK (type IN ('episode', 'discussion', 'roast')),
+  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  episode_id UUID REFERENCES episodes(id) ON DELETE SET NULL,
+  upvotes INTEGER DEFAULT 0,
+  downvotes INTEGER DEFAULT 0,
+  comments_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE episodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE community_posts ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
-CREATE POLICY "Users can view own profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can view all profiles" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Users can update own profile" ON profiles
-  FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Anyone can view published episodes" ON episodes FOR SELECT USING (status = 'published');
+CREATE POLICY "Users can manage own episodes" ON episodes FOR ALL USING (auth.uid() = creator_id);
 
-CREATE POLICY "Users can insert own profile" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Create function to handle user creation
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO profiles (id, email, full_name, role)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', 'User'),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'founder')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create trigger
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+CREATE POLICY "Anyone can view posts" ON community_posts FOR SELECT USING (true);
+CREATE POLICY "Users can create posts" ON community_posts FOR INSERT WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "Users can update own posts" ON community_posts FOR UPDATE USING (auth.uid() = author_id);
 ```
 
-### 5. Install Dependencies & Run
+### 3. Install Dependencies & Run
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 🔧 Troubleshooting
+## 🎯 Key Features Implementation
 
-### OAuth Issues
+### AI Script Generation
+- Uses OpenAI GPT-4 to generate engaging podcast scripts
+- Customizable duration and topic
+- Pro users get longer episodes and better prompts
 
-**"Server IP address could not be found"**
-- Make sure you're using your actual Supabase project URL, not the placeholder
-- Check that your `.env` file has the correct `EXPO_PUBLIC_SUPABASE_URL`
+### Voice AI Integration
+- ElevenLabs integration for natural voiceovers
+- Multiple voice options for Pro users
+- High-quality audio generation
 
-**"Invalid redirect URI"**
-- Ensure your OAuth redirect URIs exactly match: `https://your-project-ref.supabase.co/auth/v1/callback`
-- No trailing slashes or extra characters
+### Video AI Integration
+- Tavus integration for AI avatar videos
+- Personalized video introductions
+- Professional presenter-style videos
 
-**"OAuth provider not configured"**
-- Verify you've enabled the provider in Supabase Dashboard
-- Check that Client ID and Client Secret are correctly entered
+### Blockchain NFT Minting
+- Algorand blockchain integration
+- Mint episodes as unique NFTs
+- Ownership verification and trading
 
-### Network Errors
+### Custom Domain Creation
+- Entri API integration
+- Automatic subdomain creation (username.mypodsnap.tech)
+- Custom podcast website generation
 
-- Verify your Supabase URL and keys are correct
-- Check that your Supabase project is active
-- Ensure you have internet connectivity
+### Community Features
+- Reddit-style voting system
+- Episode sharing and discovery
+- Community discussions and feedback
 
-## 📱 Features
+## 📱 Platform Support
 
-- **Multi-role Authentication**: Founder, Freelancer, Investor roles
-- **Social Login**: Google and GitHub OAuth
-- **Project Management**: Create and browse startup projects
-- **Community Features**: Discussion forums and networking
-- **Investment Portal**: For investors to discover opportunities
-- **Responsive Design**: Works on web, iOS, and Android
+- **Web**: Full-featured web application
+- **iOS**: Native iOS app via Expo
+- **Android**: Native Android app via Expo
 
-## 🛠️ Tech Stack
+## 🔐 Authentication
 
-- **Frontend**: React Native with Expo
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Navigation**: Expo Router
-- **Styling**: React Native StyleSheet
-- **Icons**: Lucide React Native
+- Supabase Auth with email/password
+- OAuth support (Google, GitHub, LinkedIn)
+- Secure session management
+
+## 💰 Monetization
+
+- **Free Tier**: Basic features, 5-minute episodes
+- **Pro Tier**: Advanced AI features, unlimited duration, analytics
+- RevenueCat for mobile subscriptions
+- Stripe for web payments
+
+## 🚀 Deployment
+
+- **Web**: Netlify automatic deployment
+- **iOS**: TestFlight distribution
+- **Android**: APK distribution
 
 ## 📄 License
 

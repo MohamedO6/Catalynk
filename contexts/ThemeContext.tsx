@@ -20,13 +20,11 @@ const lightColors = {
   error: '#EF4444',
   background: '#FFFFFF',
   surface: '#F9FAFB',
-  surfaceVariant: '#F3F4F6',
+  card: '#FFFFFF',
   text: '#111827',
   textSecondary: '#6B7280',
   textTertiary: '#9CA3AF',
   border: '#E5E7EB',
-  borderLight: '#F3F4F6',
-  card: '#FFFFFF',
 };
 
 const darkColors = {
@@ -38,13 +36,11 @@ const darkColors = {
   error: '#F87171',
   background: '#0F0F23',
   surface: '#1A1A2E',
-  surfaceVariant: '#16213E',
+  card: '#1A1A2E',
   text: '#F9FAFB',
   textSecondary: '#D1D5DB',
   textTertiary: '#9CA3AF',
   border: '#374151',
-  borderLight: '#4B5563',
-  card: '#1A1A2E',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -57,7 +53,6 @@ export const useTheme = () => {
   return context;
 };
 
-// Platform-specific storage functions
 const getStoredTheme = async (): Promise<Theme | null> => {
   try {
     if (Platform.OS === 'web') {
@@ -68,7 +63,6 @@ const getStoredTheme = async (): Promise<Theme | null> => {
       return stored && ['light', 'dark', 'auto'].includes(stored) ? (stored as Theme) : null;
     }
   } catch (error) {
-    console.warn('Failed to get stored theme:', error);
     return null;
   }
 };
@@ -93,7 +87,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const colors = actualTheme === 'dark' ? darkColors : lightColors;
 
   useEffect(() => {
-    // Load saved theme preference
     getStoredTheme().then((savedTheme) => {
       if (savedTheme) {
         setThemeState(savedTheme);

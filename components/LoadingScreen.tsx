@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Rocket } from 'lucide-react-native';
+import { Mic } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function LoadingScreen() {
@@ -62,10 +62,10 @@ export default function LoadingScreen() {
       >
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
-            <Rocket size={40} color="#FFFFFF" />
+            <Mic size={40} color="#FFFFFF" />
           </View>
-          <Text style={styles.appName}>Catalynk</Text>
-          <Text style={styles.tagline}>Where Innovation Meets Opportunity</Text>
+          <Text style={styles.appName}>PodSnap</Text>
+          <Text style={styles.tagline}>AI-Powered Podcast Creation</Text>
         </View>
         <Text style={styles.loadingText}>Loading...</Text>
       </LinearGradient>

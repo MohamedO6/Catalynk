@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Dimensions,
   Image,
   Alert,
@@ -13,223 +12,123 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import {
-  Search,
   Plus,
+  Play,
   TrendingUp,
   Users,
-  DollarSign,
-  Sparkles,
-  Bell,
-  Play,
-  Volume2,
-  VolumeX,
   Crown,
-  Heart,
-  MessageCircle,
+  Bell,
+  Search,
+  Mic,
+  Video,
   Share2,
-  Star,
-  MapPin,
-  Clock,
-  Settings,
-  UserPlus,
-  Zap,
+  Heart,
+  MoreHorizontal,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
-interface Project {
+interface Episode {
   id: string;
   title: string;
   description: string;
-  category: string;
-  founder_id: string;
-  funding_goal: number;
-  current_funding: number;
-  location?: string;
-  image_url?: string;
-  has_audio: boolean;
+  creator: string;
+  duration: string;
+  plays: number;
+  likes: number;
+  image_url: string;
   has_video: boolean;
   created_at: string;
-  profiles: {
-    full_name: string;
-    avatar_url?: string;
-  };
-}
-
-interface AIMatch {
-  id: string;
-  type: 'freelancer' | 'investor';
-  name: string;
-  title: string;
-  skills?: string[];
-  focus?: string[];
-  rating?: number;
-  portfolio?: number;
-  avatar: string;
-  matchScore: number;
 }
 
 const mockStats = {
-  totalProjects: 1247,
-  activeUsers: 15432,
-  totalFunding: 2850000,
-  successRate: 78,
+  totalEpisodes: 1247,
+  totalPlays: 45632,
+  totalCreators: 892,
+  avgRating: 4.8,
 };
 
-const mockAIMatches: AIMatch[] = [
+const mockTrendingEpisodes: Episode[] = [
   {
     id: '1',
-    type: 'freelancer',
-    name: 'Alex Thompson',
-    title: 'Full-Stack Developer',
-    skills: ['React Native', 'Node.js', 'AI/ML'],
-    rating: 4.9,
-    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-    matchScore: 95,
+    title: 'The Future of AI in Content Creation',
+    description: 'Exploring how artificial intelligence is revolutionizing the way we create and consume content.',
+    creator: 'Sarah Chen',
+    duration: '12:34',
+    plays: 2847,
+    likes: 234,
+    image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_video: true,
+    created_at: '2024-01-15',
   },
   {
     id: '2',
-    type: 'investor',
-    name: 'Jennifer Park',
-    title: 'Angel Investor',
-    focus: ['FinTech', 'HealthTech'],
-    portfolio: 23,
-    avatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-    matchScore: 88,
+    title: 'Building Sustainable Startups',
+    description: 'A deep dive into creating businesses that are both profitable and environmentally conscious.',
+    creator: 'Marcus Johnson',
+    duration: '18:22',
+    plays: 1923,
+    likes: 189,
+    image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_video: false,
+    created_at: '2024-01-14',
+  },
+  {
+    id: '3',
+    title: 'The Psychology of Decision Making',
+    description: 'Understanding the cognitive biases that influence our daily choices and how to overcome them.',
+    creator: 'Dr. Emily Rodriguez',
+    duration: '15:45',
+    plays: 3156,
+    likes: 298,
+    image_url: 'https://images.pexels.com/photos/3184293/pexels-photo-3184293.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_video: true,
+    created_at: '2024-01-13',
   },
 ];
 
 export default function Home() {
   const { colors } = useTheme();
   const { profile } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [likedEpisodes, setLikedEpisodes] = useState<string[]>([]);
 
-  useEffect(() => {
-    fetchTrendingProjects();
-  }, []);
-
-  const fetchTrendingProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          profiles:founder_id (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) {
-        console.error('Error fetching projects:', error);
-        return;
-      }
-
-      setProjects(data || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleCreateEpisode = () => {
+    router.push('/create-episode');
   };
 
-  const getDashboardTitle = () => {
-    switch (profile?.role) {
-      case 'founder':
-        return 'Founder Dashboard';
-      case 'freelancer':
-        return 'Freelancer Hub';
-      case 'investor':
-        return 'Investment Portal';
-      default:
-        return 'Welcome to Catalynk';
-    }
+  const handlePlayEpisode = (episodeId: string) => {
+    Alert.alert('Playing Episode', 'Episode player would open here with audio/video playback.');
   };
 
-  const getDashboardSubtitle = () => {
-    const name = profile?.full_name?.split(' ')[0] || 'there';
-    switch (profile?.role) {
-      case 'founder':
-        return `Welcome back, ${name}! Ready to build the future?`;
-      case 'freelancer':
-        return `Hello ${name}! Find your next exciting project`;
-      case 'investor':
-        return `Hi ${name}! Discover promising investment opportunities`;
-      default:
-        return 'Discover innovation, connect with talent, and grow your network';
-    }
+  const handleLikeEpisode = (episodeId: string) => {
+    setLikedEpisodes(prev =>
+      prev.includes(episodeId)
+        ? prev.filter(id => id !== episodeId)
+        : [...prev, episodeId]
+    );
   };
 
-  const handleCreateProject = () => {
-    if (profile?.role !== 'founder') {
-      Alert.alert('Access Restricted', 'Only founders can create projects. Please update your profile role.');
-      return;
-    }
-    router.push('/create-project');
+  const handleShareEpisode = (episodeId: string) => {
+    Alert.alert('Share Episode', 'Episode link copied to clipboard!');
   };
 
-  const handlePlayAudio = (projectId: string) => {
-    if (audioPlaying === projectId) {
-      setAudioPlaying(null);
-    } else {
-      setAudioPlaying(projectId);
-      Alert.alert('Audio Playing', 'Playing AI-generated pitch audio...');
-      // Simulate audio playback
-      setTimeout(() => setAudioPlaying(null), 5000);
-    }
-  };
-
-  const handlePlayVideo = (projectId: string) => {
-    Alert.alert('Video Playing', 'Opening AI-generated video introduction...');
-    // In a real app, this would open a video player
-  };
-
-  const handleUpgradeToPro = () => {
+  const handleUpgrade = () => {
     router.push('/upgrade');
-  };
-
-  const handleProjectPress = (projectId: string) => {
-    router.push(`/project/${projectId}`);
-  };
-
-  const handleConnectMatch = (matchId: string) => {
-    Alert.alert('Connection Request', 'Connection request sent! They will be notified.');
-  };
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/(tabs)/projects?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  const handleFreelancerMatching = () => {
-    router.push('/freelancer-matching');
-  };
-
-  const handleSubscriptionManagement = () => {
-    router.push('/subscription-management');
   };
 
   const handleNotifications = () => {
     Alert.alert('Notifications', 'You have 3 new notifications!');
   };
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`;
     } else {
-      return `$${amount.toLocaleString()}`;
+      return num.toString();
     }
   };
 
@@ -267,15 +166,6 @@ export default function Home() {
       flexDirection: 'row',
       alignItems: 'center',
     },
-    notificationButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginLeft: 12,
-    },
     upgradeButton: {
       backgroundColor: colors.warning + '20',
       paddingHorizontal: 12,
@@ -283,6 +173,7 @@ export default function Home() {
       borderRadius: 20,
       flexDirection: 'row',
       alignItems: 'center',
+      marginRight: 12,
     },
     upgradeText: {
       fontSize: 12,
@@ -290,24 +181,13 @@ export default function Home() {
       color: colors.warning,
       marginLeft: 4,
     },
-    searchContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    notificationButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.surface,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 4,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 16,
-      fontFamily: 'Inter-Regular',
-      color: colors.text,
-      paddingVertical: 12,
-      marginLeft: 12,
-    },
-    searchButton: {
-      padding: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     quickActions: {
       flexDirection: 'row',
@@ -400,7 +280,7 @@ export default function Home() {
       fontFamily: 'Inter-Medium',
       color: colors.primary,
     },
-    projectCard: {
+    episodeCard: {
       backgroundColor: colors.card,
       borderRadius: 16,
       marginBottom: 16,
@@ -408,212 +288,102 @@ export default function Home() {
       borderColor: colors.border,
       overflow: 'hidden',
     },
-    projectImage: {
+    episodeImage: {
       width: '100%',
       height: 160,
+      position: 'relative',
     },
-    projectContent: {
+    playOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    playButton: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    videoBadge: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      backgroundColor: colors.error,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    videoBadgeText: {
+      fontSize: 10,
+      fontFamily: 'Inter-Bold',
+      color: '#FFFFFF',
+      marginLeft: 4,
+    },
+    episodeContent: {
       padding: 16,
     },
-    projectHeader: {
+    episodeHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       marginBottom: 8,
     },
-    projectTitle: {
+    episodeTitle: {
       fontSize: 18,
       fontFamily: 'Inter-Bold',
       color: colors.text,
       flex: 1,
       marginRight: 12,
     },
-    projectActions: {
+    episodeActions: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     actionButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
+      padding: 6,
       marginLeft: 8,
     },
-    projectFounder: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    founderAvatar: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      marginRight: 8,
-      backgroundColor: colors.primary,
-    },
-    founderName: {
+    episodeCreator: {
       fontSize: 14,
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
+      marginBottom: 8,
     },
-    projectDescription: {
+    episodeDescription: {
       fontSize: 15,
       fontFamily: 'Inter-Regular',
       color: colors.textSecondary,
       lineHeight: 22,
-      marginBottom: 16,
+      marginBottom: 12,
     },
-    projectMeta: {
+    episodeStats: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
     },
-    categoryBadge: {
-      backgroundColor: colors.primary + '20',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
-    },
-    categoryText: {
-      fontSize: 12,
-      fontFamily: 'Inter-Medium',
-      color: colors.primary,
-    },
-    projectStats: {
+    statItem: {
       flexDirection: 'row',
       alignItems: 'center',
     },
-    projectStat: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginLeft: 16,
-    },
-    projectStatText: {
+    statText: {
       fontSize: 12,
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
       marginLeft: 4,
     },
-    fundingContainer: {
-      marginTop: 12,
-    },
-    fundingHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    fundingAmount: {
-      fontSize: 16,
-      fontFamily: 'Inter-Bold',
-      color: colors.success,
-    },
-    fundingTarget: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-    },
-    progressBar: {
-      height: 6,
-      backgroundColor: colors.border,
-      borderRadius: 3,
-      marginBottom: 4,
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: colors.success,
-      borderRadius: 3,
-    },
-    progressText: {
-      fontSize: 12,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      textAlign: 'right',
-    },
-    matchCard: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      marginRight: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      width: 280,
-    },
-    matchHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    matchAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      marginRight: 12,
-    },
-    matchInfo: {
-      flex: 1,
-    },
-    matchName: {
-      fontSize: 16,
-      fontFamily: 'Inter-Bold',
-      color: colors.text,
-    },
-    matchTitle: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-    },
-    matchScore: {
-      backgroundColor: colors.success + '20',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
-    },
-    matchScoreText: {
-      fontSize: 12,
-      fontFamily: 'Inter-Bold',
-      color: colors.success,
-    },
-    matchDetails: {
-      marginBottom: 12,
-    },
-    matchSkills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-    },
-    skillTag: {
-      backgroundColor: colors.surface,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-      marginRight: 6,
-      marginBottom: 6,
-    },
-    skillText: {
-      fontSize: 12,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-    },
-    connectButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: 10,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    connectButtonText: {
+    duration: {
       fontSize: 14,
       fontFamily: 'Inter-SemiBold',
-      color: '#FFFFFF',
-    },
-    loadingText: {
-      fontSize: 16,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 40,
+      color: colors.primary,
     },
   });
 
@@ -625,12 +395,14 @@ export default function Home() {
       >
         <View style={styles.headerTop}>
           <View style={styles.greeting}>
-            <Text style={styles.title}>{getDashboardTitle()}</Text>
-            <Text style={styles.subtitle}>{getDashboardSubtitle()}</Text>
+            <Text style={styles.title}>Welcome back!</Text>
+            <Text style={styles.subtitle}>
+              Ready to create your next podcast episode?
+            </Text>
           </View>
           <View style={styles.headerActions}>
-            {profile?.subscription_tier === 'free' && (
-              <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgradeToPro}>
+            {profile?.tier === 'free' && (
+              <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
                 <Crown size={16} color={colors.warning} />
                 <Text style={styles.upgradeText}>Upgrade</Text>
               </TouchableOpacity>
@@ -640,37 +412,16 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.searchContainer}>
-          <Search size={20} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search projects, people, or ideas..."
-            placeholderTextColor={colors.textTertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-          />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Search size={16} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
       </LinearGradient>
 
       <View style={styles.quickActions}>
-        {profile?.role === 'founder' && (
-          <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateProject}>
-            <Plus size={20} color="#FFFFFF" />
-            <Text style={styles.quickActionText}>Create Project</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.secondaryActionButton} onPress={handleFreelancerMatching}>
-          <UserPlus size={20} color={colors.text} />
-          <Text style={styles.secondaryActionText}>Find Talent</Text>
+        <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateEpisode}>
+          <Plus size={20} color="#FFFFFF" />
+          <Text style={styles.quickActionText}>Create Episode</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryActionButton} onPress={handleSubscriptionManagement}>
-          <Settings size={20} color={colors.text} />
-          <Text style={styles.secondaryActionText}>Subscription</Text>
+        <TouchableOpacity style={styles.secondaryActionButton}>
+          <Search size={20} color={colors.text} />
+          <Text style={styles.secondaryActionText}>Discover</Text>
         </TouchableOpacity>
       </View>
 
@@ -678,174 +429,105 @@ export default function Home() {
         <View style={styles.statsContainer}>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{mockStats.totalProjects.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Active Projects</Text>
+              <Text style={styles.statValue}>{formatNumber(mockStats.totalEpisodes)}</Text>
+              <Text style={styles.statLabel}>Total Episodes</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{mockStats.activeUsers.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Community Members</Text>
+              <Text style={styles.statValue}>{formatNumber(mockStats.totalPlays)}</Text>
+              <Text style={styles.statLabel}>Total Plays</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatCurrency(mockStats.totalFunding)}</Text>
-              <Text style={styles.statLabel}>Total Funding</Text>
+              <Text style={styles.statValue}>{formatNumber(mockStats.totalCreators)}</Text>
+              <Text style={styles.statLabel}>Creators</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{mockStats.successRate}%</Text>
-              <Text style={styles.statLabel}>Success Rate</Text>
+              <Text style={styles.statValue}>{mockStats.avgRating}</Text>
+              <Text style={styles.statLabel}>Avg Rating</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Projects</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(tabs)/projects')}>
+            <Text style={styles.sectionTitle}>Trending Episodes</Text>
+            <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
 
-          {loading ? (
-            <Text style={styles.loadingText}>Loading projects...</Text>
-          ) : projects.length === 0 ? (
-            <Text style={styles.loadingText}>No projects found</Text>
-          ) : (
-            projects.map((project) => {
-              const progress = project.funding_goal > 0 
-                ? Math.round((project.current_funding / project.funding_goal) * 100)
-                : 0;
-
-              return (
-                <TouchableOpacity 
-                  key={project.id} 
-                  style={styles.projectCard}
-                  onPress={() => handleProjectPress(project.id)}
-                >
-                  {project.image_url && (
-                    <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+          {mockTrendingEpisodes.map((episode) => {
+            const isLiked = likedEpisodes.includes(episode.id);
+            
+            return (
+              <TouchableOpacity 
+                key={episode.id} 
+                style={styles.episodeCard}
+                onPress={() => handlePlayEpisode(episode.id)}
+              >
+                <View style={styles.episodeImage}>
+                  <Image source={{ uri: episode.image_url }} style={styles.episodeImage} />
+                  <View style={styles.playOverlay}>
+                    <TouchableOpacity 
+                      style={styles.playButton}
+                      onPress={() => handlePlayEpisode(episode.id)}
+                    >
+                      <Play size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                  {episode.has_video && (
+                    <View style={styles.videoBadge}>
+                      <Video size={12} color="#FFFFFF" />
+                      <Text style={styles.videoBadgeText}>VIDEO</Text>
+                    </View>
                   )}
-                  
-                  <View style={styles.projectContent}>
-                    <View style={styles.projectHeader}>
-                      <Text style={styles.projectTitle}>{project.title}</Text>
-                      <View style={styles.projectActions}>
-                        {project.has_audio && (
-                          <TouchableOpacity 
-                            style={styles.actionButton}
-                            onPress={() => handlePlayAudio(project.id)}
-                          >
-                            {audioPlaying === project.id ? (
-                              <VolumeX size={18} color={colors.primary} />
-                            ) : (
-                              <Volume2 size={18} color={colors.textSecondary} />
-                            )}
-                          </TouchableOpacity>
-                        )}
-                        {project.has_video && (
-                          <TouchableOpacity 
-                            style={styles.actionButton}
-                            onPress={() => handlePlayVideo(project.id)}
-                          >
-                            <Play size={18} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
+                </View>
+                
+                <View style={styles.episodeContent}>
+                  <View style={styles.episodeHeader}>
+                    <Text style={styles.episodeTitle}>{episode.title}</Text>
+                    <View style={styles.episodeActions}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleLikeEpisode(episode.id)}
+                      >
+                        <Heart
+                          size={20}
+                          color={isLiked ? colors.error : colors.textSecondary}
+                          fill={isLiked ? colors.error : 'none'}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleShareEpisode(episode.id)}
+                      >
+                        <Share2 size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton}>
+                        <MoreHorizontal size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
                     </View>
-
-                    <View style={styles.projectFounder}>
-                      {project.profiles?.avatar_url ? (
-                        <Image source={{ uri: project.profiles.avatar_url }} style={styles.founderAvatar} />
-                      ) : (
-                        <View style={styles.founderAvatar} />
-                      )}
-                      <Text style={styles.founderName}>by {project.profiles?.full_name || 'Unknown'}</Text>
-                    </View>
-
-                    <Text style={styles.projectDescription}>{project.description}</Text>
-
-                    <View style={styles.projectMeta}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{project.category}</Text>
-                      </View>
-                      
-                      <View style={styles.projectStats}>
-                        {project.location && (
-                          <View style={styles.projectStat}>
-                            <MapPin size={14} color={colors.textSecondary} />
-                            <Text style={styles.projectStatText}>{project.location}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-
-                    {project.funding_goal > 0 && (
-                      <View style={styles.fundingContainer}>
-                        <View style={styles.fundingHeader}>
-                          <Text style={styles.fundingAmount}>
-                            {formatCurrency(project.current_funding)} raised
-                          </Text>
-                          <Text style={styles.fundingTarget}>
-                            of {formatCurrency(project.funding_goal)} goal
-                          </Text>
-                        </View>
-                        <View style={styles.progressBar}>
-                          <View
-                            style={[
-                              styles.progressFill,
-                              { width: `${Math.min(progress, 100)}%` },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.progressText}>{progress}% funded</Text>
-                      </View>
-                    )}
                   </View>
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>AI-Powered Matches</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={handleFreelancerMatching}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
+                  <Text style={styles.episodeCreator}>by {episode.creator}</Text>
+                  <Text style={styles.episodeDescription} numberOfLines={2}>
+                    {episode.description}
+                  </Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {mockAIMatches.map((match) => (
-              <View key={match.id} style={styles.matchCard}>
-                <View style={styles.matchHeader}>
-                  <Image source={{ uri: match.avatar }} style={styles.matchAvatar} />
-                  <View style={styles.matchInfo}>
-                    <Text style={styles.matchName}>{match.name}</Text>
-                    <Text style={styles.matchTitle}>{match.title}</Text>
-                  </View>
-                  <View style={styles.matchScore}>
-                    <Text style={styles.matchScoreText}>{match.matchScore}%</Text>
+                  <View style={styles.episodeStats}>
+                    <View style={styles.statItem}>
+                      <Play size={14} color={colors.textSecondary} />
+                      <Text style={styles.statText}>{formatNumber(episode.plays)}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Heart size={14} color={colors.textSecondary} />
+                      <Text style={styles.statText}>{formatNumber(episode.likes)}</Text>
+                    </View>
+                    <Text style={styles.duration}>{episode.duration}</Text>
                   </View>
                 </View>
-
-                <View style={styles.matchDetails}>
-                  <View style={styles.matchSkills}>
-                    {(match.skills || match.focus || []).map((skill, index) => (
-                      <View key={index} style={styles.skillTag}>
-                        <Text style={styles.skillText}>{skill}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.connectButton}
-                  onPress={() => handleConnectMatch(match.id)}
-                >
-                  <Text style={styles.connectButtonText}>Connect</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>

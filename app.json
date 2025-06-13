@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Catalynk",
-    "slug": "catalynk-platform",
+    "name": "PodSnap",
+    "slug": "podsnap-platform",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "catalynk",
+    "scheme": "podsnap",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.catalynk.app"
+      "bundleIdentifier": "com.podsnap.app"
     },
     "android": {
-      "package": "com.catalynk.app",
+      "package": "com.podsnap.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#8B5CF6"

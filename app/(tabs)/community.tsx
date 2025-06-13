@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,211 +6,131 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Dimensions,
+  Image,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
 import {
   Search,
-  Plus,
-  MessageCircle,
+  TrendingUp,
   ArrowUp,
   ArrowDown,
+  MessageCircle,
   Share2,
-  Bookmark,
-  Clock,
-  User,
-  Flame,
-  TrendingUp,
+  Play,
+  Heart,
+  MoreHorizontal,
+  Filter,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-
-const { width } = Dimensions.get('window');
 
 interface CommunityPost {
   id: string;
+  type: 'episode' | 'discussion' | 'roast';
   title: string;
-  content: string;
-  author_id: string;
-  category: string;
-  tags: string[];
+  content?: string;
+  author: string;
+  avatar: string;
+  timestamp: string;
   upvotes: number;
   downvotes: number;
-  comment_count: number;
-  is_pinned: boolean;
-  created_at: string;
-  profiles: {
-    full_name: string;
-    role: string;
+  comments: number;
+  episode?: {
+    duration: string;
+    plays: number;
+    image_url: string;
   };
 }
 
-const categories = ['All', 'Startup Advice', 'Job Postings', 'Lessons Learned', 'Tools & Resources', 'Funding', 'Technical'];
-const sortOptions = ['Hot', 'New', 'Top', 'Rising'];
+const mockPosts: CommunityPost[] = [
+  {
+    id: '1',
+    type: 'episode',
+    title: 'The Future of Remote Work',
+    author: 'Sarah Chen',
+    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    timestamp: '2 hours ago',
+    upvotes: 47,
+    downvotes: 3,
+    comments: 23,
+    episode: {
+      duration: '15:32',
+      plays: 1247,
+      image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    },
+  },
+  {
+    id: '2',
+    type: 'discussion',
+    title: 'Best practices for podcast intros?',
+    content: 'I\'m struggling with creating engaging podcast intros. What are your favorite techniques for hooking listeners in the first 30 seconds?',
+    author: 'Marcus Johnson',
+    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    timestamp: '4 hours ago',
+    upvotes: 29,
+    downvotes: 1,
+    comments: 18,
+  },
+  {
+    id: '3',
+    type: 'roast',
+    title: 'Roast My Podcast: "Crypto for Cats"',
+    content: 'I created a podcast explaining cryptocurrency using cat analogies. Please roast it mercilessly so I can improve! 🐱',
+    author: 'Emily Rodriguez',
+    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    timestamp: '1 day ago',
+    upvotes: 156,
+    downvotes: 12,
+    comments: 89,
+  },
+];
+
+const categories = ['All', 'Episodes', 'Discussions', 'Roast My Podcast', 'Tips & Tricks'];
 
 export default function Community() {
   const { colors } = useTheme();
-  const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('Hot');
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [likedPosts, setLikedPosts] = useState<string[]>([]);
+  const [posts, setPosts] = useState(mockPosts);
 
-  useEffect(() => {
-    fetchPosts();
-  }, [selectedCategory, sortBy]);
-
-  const fetchPosts = async () => {
-    try {
-      let query = supabase
-        .from('community_posts')
-        .select(`
-          *,
-          profiles:author_id (
-            full_name,
-            role
-          )
-        `);
-
-      if (selectedCategory !== 'All') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'New':
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'Top':
-          query = query.order('upvotes', { ascending: false });
-          break;
-        case 'Hot':
-        default:
-          // Simple hot algorithm: upvotes - downvotes, with recent posts getting boost
-          query = query.order('upvotes', { ascending: false });
-          break;
-      }
-
-      const { data, error } = await query.limit(20);
-
-      if (error) {
-        console.error('Error fetching posts:', error);
-        return;
-      }
-
-      setPosts(data || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVote = async (postId: string, voteType: 'up' | 'down') => {
-    if (!profile?.id) {
-      Alert.alert('Login Required', 'Please log in to vote on posts.');
-      return;
-    }
-
-    try {
-      // Check if user already voted
-      const { data: existingVote } = await supabase
-        .from('community_votes')
-        .select('*')
-        .eq('user_id', profile.id)
-        .eq('post_id', postId)
-        .single();
-
-      if (existingVote) {
-        if (existingVote.vote_type === voteType) {
-          // Remove vote
-          await supabase
-            .from('community_votes')
-            .delete()
-            .eq('id', existingVote.id);
-        } else {
-          // Update vote
-          await supabase
-            .from('community_votes')
-            .update({ vote_type: voteType })
-            .eq('id', existingVote.id);
+  const handleVote = (postId: string, voteType: 'up' | 'down') => {
+    setPosts(prev =>
+      prev.map(post => {
+        if (post.id === postId) {
+          if (voteType === 'up') {
+            return { ...post, upvotes: post.upvotes + 1 };
+          } else {
+            return { ...post, downvotes: post.downvotes + 1 };
+          }
         }
-      } else {
-        // Create new vote
-        await supabase
-          .from('community_votes')
-          .insert({
-            user_id: profile.id,
-            post_id: postId,
-            vote_type: voteType,
-          });
-      }
-
-      // Refresh posts to get updated vote counts
-      fetchPosts();
-    } catch (error) {
-      console.error('Error voting:', error);
-      Alert.alert('Error', 'Failed to vote. Please try again.');
-    }
-  };
-
-  const toggleBookmark = (postId: string) => {
-    setLikedPosts(prev =>
-      prev.includes(postId)
-        ? prev.filter(id => id !== postId)
-        : [...prev, postId]
+        return post;
+      })
     );
-    Alert.alert('Bookmarked', 'Post saved to your bookmarks.');
   };
 
-  const handleCreatePost = () => {
-    if (!profile?.id) {
-      Alert.alert('Login Required', 'Please log in to create posts.');
-      return;
-    }
-    router.push('/community/create');
+  const handlePlayEpisode = (postId: string) => {
+    Alert.alert('Playing Episode', 'Episode player would open here.');
   };
 
-  const handlePostPress = (postId: string) => {
-    router.push(`/community/post/${postId}`);
+  const handleShare = (postId: string) => {
+    Alert.alert('Share', 'Post shared successfully!');
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      // In a real app, this would filter posts by search query
-      Alert.alert('Search', `Searching for: ${searchQuery}`);
+  const getPostTypeColor = (type: string) => {
+    switch (type) {
+      case 'episode': return colors.primary;
+      case 'discussion': return colors.success;
+      case 'roast': return colors.warning;
+      default: return colors.textSecondary;
     }
   };
 
-  const getSortIcon = (sort: string) => {
-    switch (sort) {
-      case 'Hot':
-        return <Flame size={16} color={colors.text} />;
-      case 'New':
-        return <Clock size={16} color={colors.text} />;
-      case 'Top':
-        return <TrendingUp size={16} color={colors.text} />;
-      case 'Rising':
-        return <ArrowUp size={16} color={colors.text} />;
-      default:
-        return null;
+  const getPostTypeLabel = (type: string) => {
+    switch (type) {
+      case 'episode': return 'Episode';
+      case 'discussion': return 'Discussion';
+      case 'roast': return 'Roast';
+      default: return 'Post';
     }
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const styles = StyleSheet.create({
@@ -234,13 +154,10 @@ export default function Community() {
       fontFamily: 'Inter-Bold',
       color: colors.text,
     },
-    createButton: {
-      backgroundColor: colors.primary,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
+    filterButton: {
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 12,
     },
     searchContainer: {
       flexDirection: 'row',
@@ -258,15 +175,11 @@ export default function Community() {
       paddingVertical: 12,
       marginLeft: 12,
     },
-    searchButton: {
-      padding: 8,
-    },
-    filtersContainer: {
+    categoriesContainer: {
       paddingVertical: 10,
     },
     categoriesScrollView: {
       paddingHorizontal: 20,
-      marginBottom: 10,
     },
     categoryButton: {
       backgroundColor: colors.surface,
@@ -289,33 +202,6 @@ export default function Community() {
     categoryTextActive: {
       color: '#FFFFFF',
     },
-    sortContainer: {
-      flexDirection: 'row',
-      paddingHorizontal: 20,
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    sortButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
-      marginRight: 8,
-    },
-    sortButtonActive: {
-      backgroundColor: colors.primary + '20',
-    },
-    sortText: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.text,
-      marginLeft: 4,
-    },
-    sortTextActive: {
-      color: colors.primary,
-    },
     postsContainer: {
       flex: 1,
       paddingHorizontal: 20,
@@ -331,32 +217,37 @@ export default function Community() {
     },
     postHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       marginBottom: 12,
     },
-    postAuthorInfo: {
+    avatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 12,
+    },
+    authorInfo: {
       flex: 1,
     },
-    postAuthor: {
+    authorName: {
       fontSize: 16,
       fontFamily: 'Inter-SemiBold',
       color: colors.text,
     },
-    postAuthorRole: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-    },
-    postTimestamp: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    postTimestampText: {
+    timestamp: {
       fontSize: 12,
       fontFamily: 'Inter-Regular',
       color: colors.textTertiary,
-      marginLeft: 4,
+    },
+    postTypeBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    postTypeText: {
+      fontSize: 10,
+      fontFamily: 'Inter-Bold',
+      color: '#FFFFFF',
     },
     postTitle: {
       fontSize: 18,
@@ -372,23 +263,40 @@ export default function Community() {
       lineHeight: 22,
       marginBottom: 12,
     },
-    tagsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginBottom: 16,
-    },
-    tag: {
+    episodeCard: {
       backgroundColor: colors.surface,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-      marginRight: 8,
-      marginBottom: 4,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
-    tagText: {
+    episodeImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      marginRight: 12,
+    },
+    episodeInfo: {
+      flex: 1,
+    },
+    episodeDuration: {
+      fontSize: 14,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.primary,
+    },
+    episodePlays: {
       fontSize: 12,
-      fontFamily: 'Inter-Medium',
+      fontFamily: 'Inter-Regular',
       color: colors.textSecondary,
+    },
+    playButton: {
+      backgroundColor: colors.primary,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     postActions: {
       flexDirection: 'row',
@@ -435,33 +343,6 @@ export default function Community() {
       padding: 6,
       marginLeft: 8,
     },
-    categoryBadge: {
-      backgroundColor: colors.primary + '20',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
-      alignSelf: 'flex-start',
-      marginBottom: 8,
-    },
-    categoryBadgeText: {
-      fontSize: 12,
-      fontFamily: 'Inter-Medium',
-      color: colors.primary,
-    },
-    loadingText: {
-      fontSize: 16,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 40,
-    },
-    emptyText: {
-      fontSize: 16,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 40,
-    },
   });
 
   return (
@@ -469,8 +350,8 @@ export default function Community() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.title}>Community</Text>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreatePost}>
-            <Plus size={24} color="#FFFFFF" />
+          <TouchableOpacity style={styles.filterButton}>
+            <Filter size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -482,15 +363,11 @@ export default function Community() {
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
           />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Search size={16} color={colors.primary} />
-          </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.filtersContainer}>
+      <View style={styles.categoriesContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -516,125 +393,87 @@ export default function Community() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        <View style={styles.sortContainer}>
-          {sortOptions.map((sort) => (
-            <TouchableOpacity
-              key={sort}
-              style={[
-                styles.sortButton,
-                sortBy === sort && styles.sortButtonActive,
-              ]}
-              onPress={() => setSortBy(sort)}
-            >
-              {getSortIcon(sort)}
-              <Text
-                style={[
-                  styles.sortText,
-                  sortBy === sort && styles.sortTextActive,
-                ]}
-              >
-                {sort}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
 
       <ScrollView style={styles.postsContainer} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <Text style={styles.loadingText}>Loading discussions...</Text>
-        ) : posts.length === 0 ? (
-          <Text style={styles.emptyText}>No posts found. Be the first to start a discussion!</Text>
-        ) : (
-          posts.map((post) => (
-            <TouchableOpacity 
-              key={post.id} 
-              style={styles.postCard}
-              onPress={() => handlePostPress(post.id)}
-            >
-              <View style={styles.postHeader}>
-                <View style={styles.postAuthorInfo}>
-                  <Text style={styles.postAuthor}>{post.profiles?.full_name || 'Anonymous'}</Text>
-                  <Text style={styles.postAuthorRole}>{post.profiles?.role || 'Member'}</Text>
-                </View>
-                <View style={styles.postTimestamp}>
-                  <Clock size={12} color={colors.textTertiary} />
-                  <Text style={styles.postTimestampText}>{formatTimeAgo(post.created_at)}</Text>
-                </View>
+        {posts.map((post) => (
+          <View key={post.id} style={styles.postCard}>
+            <View style={styles.postHeader}>
+              <Image source={{ uri: post.avatar }} style={styles.avatar} />
+              <View style={styles.authorInfo}>
+                <Text style={styles.authorName}>{post.author}</Text>
+                <Text style={styles.timestamp}>{post.timestamp}</Text>
               </View>
-
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{post.category}</Text>
+              <View style={[
+                styles.postTypeBadge,
+                { backgroundColor: getPostTypeColor(post.type) }
+              ]}>
+                <Text style={styles.postTypeText}>{getPostTypeLabel(post.type)}</Text>
               </View>
+            </View>
 
-              <Text style={styles.postTitle}>{post.title}</Text>
-              <Text style={styles.postContent} numberOfLines={3}>{post.content}</Text>
+            <Text style={styles.postTitle}>{post.title}</Text>
+            
+            {post.content && (
+              <Text style={styles.postContent}>{post.content}</Text>
+            )}
 
-              {post.tags && post.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
-                  {post.tags.slice(0, 3).map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>#{tag}</Text>
-                    </View>
-                  ))}
+            {post.episode && (
+              <View style={styles.episodeCard}>
+                <Image source={{ uri: post.episode.image_url }} style={styles.episodeImage} />
+                <View style={styles.episodeInfo}>
+                  <Text style={styles.episodeDuration}>{post.episode.duration}</Text>
+                  <Text style={styles.episodePlays}>{post.episode.plays.toLocaleString()} plays</Text>
                 </View>
-              )}
+                <TouchableOpacity 
+                  style={styles.playButton}
+                  onPress={() => handlePlayEpisode(post.id)}
+                >
+                  <Play size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            )}
 
-              <View style={styles.postActions}>
-                <View style={styles.postActionsLeft}>
-                  <View style={styles.voteContainer}>
-                    <TouchableOpacity
-                      style={styles.voteButton}
-                      onPress={() => handleVote(post.id, 'up')}
-                    >
-                      <ArrowUp
-                        size={20}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                    <Text style={styles.voteCount}>
-                      {post.upvotes - post.downvotes}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.voteButton}
-                      onPress={() => handleVote(post.id, 'down')}
-                    >
-                      <ArrowDown
-                        size={20}
-                        color={colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity 
-                    style={styles.commentsButton}
-                    onPress={() => handlePostPress(post.id)}
-                  >
-                    <MessageCircle size={18} color={colors.textSecondary} />
-                    <Text style={styles.commentsCount}>{post.comment_count}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.postActionsRight}>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Share2 size={18} color={colors.textSecondary} />
-                  </TouchableOpacity>
+            <View style={styles.postActions}>
+              <View style={styles.postActionsLeft}>
+                <View style={styles.voteContainer}>
                   <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => toggleBookmark(post.id)}
+                    style={styles.voteButton}
+                    onPress={() => handleVote(post.id, 'up')}
                   >
-                    <Bookmark
-                      size={18}
-                      color={likedPosts.includes(post.id) ? colors.primary : colors.textSecondary}
-                      fill={likedPosts.includes(post.id) ? colors.primary : 'none'}
-                    />
+                    <ArrowUp size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.voteCount}>
+                    {post.upvotes - post.downvotes}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.voteButton}
+                    onPress={() => handleVote(post.id, 'down')}
+                  >
+                    <ArrowDown size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
+
+                <TouchableOpacity style={styles.commentsButton}>
+                  <MessageCircle size={18} color={colors.textSecondary} />
+                  <Text style={styles.commentsCount}>{post.comments}</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          ))
-        )}
+
+              <View style={styles.postActionsRight}>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleShare(post.id)}
+                >
+                  <Share2 size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <MoreHorizontal size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </View>
   );

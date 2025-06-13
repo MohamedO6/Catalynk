@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Chrome as Home, Briefcase, MessageCircle, User, DollarSign, Gamepad2 } from 'lucide-react-native';
+import { Home, Mic, MessageCircle, User, Crown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
@@ -38,40 +38,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="projects"
+        name="create"
         options={{
-          title: 'Projects',
+          title: 'Create',
           tabBarIcon: ({ size, color }) => (
-            <Briefcase size={size} color={color} />
+            <Mic size={size} color={color} />
           ),
         }}
       />
-      {profile?.role === 'investor' && (
-        <Tabs.Screen
-          name="investments"
-          options={{
-            title: 'Investments',
-            tabBarIcon: ({ size, color }) => (
-              <DollarSign size={size} color={color} />
-            ),
-          }}
-        />
-      )}
       <Tabs.Screen
         name="community"
         options={{
           title: 'Community',
           tabBarIcon: ({ size, color }) => (
             <MessageCircle size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="game"
-        options={{
-          title: 'Pitch or Ditch',
-          tabBarIcon: ({ size, color }) => (
-            <Gamepad2 size={size} color={color} />
           ),
         }}
       />

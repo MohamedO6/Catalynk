@@ -5,35 +5,34 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Sparkles, Users, DollarSign, MessageSquare } from 'lucide-react-native';
+import { Mic, Sparkles, Share2, Crown } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const onboardingData = [
   {
+    icon: Mic,
+    title: 'Create Professional Podcasts',
+    description: 'Generate high-quality podcast episodes using AI - no microphone or camera required.',
+  },
+  {
     icon: Sparkles,
-    title: 'AI-Powered Matching',
-    description: 'Connect with the right talent and opportunities using our intelligent matching system.',
+    title: 'AI Script Generation',
+    description: 'Let AI write engaging scripts, then convert them to natural-sounding voiceovers with ElevenLabs.',
   },
   {
-    icon: Users,
-    title: 'Build Your Team',
-    description: 'Find co-founders, freelancers, and collaborators to bring your startup vision to life.',
+    icon: Share2,
+    title: 'Video Introductions',
+    description: 'Create personalized video intros with AI avatars using Tavus technology.',
   },
   {
-    icon: DollarSign,
-    title: 'Secure Funding',
-    description: 'Connect with investors and manage funding through blockchain-secured escrow contracts.',
-  },
-  {
-    icon: MessageSquare,
-    title: 'Community Support',
-    description: 'Join discussions, share insights, and get feedback from a thriving startup community.',
+    icon: Crown,
+    title: 'Publish as NFTs',
+    description: 'Mint your podcasts as NFTs on Algorand blockchain and build your custom podcast website.',
   },
 ];
 

@@ -10,38 +10,22 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Rocket, Github, Chrome, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { Mic, Github, Chrome } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { signInWithProvider } from '@/lib/auth';
 
 const { width } = Dimensions.get('window');
 
 export default function Welcome() {
   const { colors } = useTheme();
   const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSocialSignIn = async (provider: 'google' | 'github') => {
     setLoading(provider);
-    setError(null);
-    
-    try {
-      const { data, error } = await signInWithProvider(provider);
-      
-      if (error) {
-        setError(error.message);
-        return;
-      }
-      
-      if (data?.url) {
-        // For web, this will redirect to the provider
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      setError(`Failed to sign in with ${provider}. Please try again.`);
-    } finally {
+    // Simulate OAuth flow
+    setTimeout(() => {
       setLoading(null);
-    }
+      router.replace('/(tabs)');
+    }, 2000);
   };
 
   const styles = StyleSheet.create({
@@ -148,23 +132,6 @@ export default function Welcome() {
       color: colors.text,
       marginLeft: 12,
     },
-    errorContainer: {
-      backgroundColor: colors.error + '20',
-      borderWidth: 1,
-      borderColor: colors.error + '40',
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 20,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    errorText: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.error,
-      marginLeft: 12,
-      flex: 1,
-    },
     footer: {
       marginTop: 40,
       alignItems: 'center',
@@ -189,10 +156,10 @@ export default function Welcome() {
         >
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Rocket size={50} color="#FFFFFF" />
+              <Mic size={50} color="#FFFFFF" />
             </View>
-            <Text style={styles.appName}>Catalynk</Text>
-            <Text style={styles.tagline}>Where Innovation Meets Opportunity</Text>
+            <Text style={styles.appName}>PodSnap</Text>
+            <Text style={styles.tagline}>AI-Powered Podcast Creation</Text>
           </View>
 
           <View style={styles.buttonsContainer}>
@@ -215,13 +182,6 @@ export default function Welcome() {
               <Text style={styles.dividerText}>or continue with</Text>
               <View style={styles.dividerLine} />
             </View>
-
-            {error && (
-              <View style={styles.errorContainer}>
-                <AlertCircle size={20} color={colors.error} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
 
             <TouchableOpacity 
               style={[

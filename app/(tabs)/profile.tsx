@@ -6,24 +6,39 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Dimensions,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
-import { Settings, CreditCard as Edit3, Star, Award, Users, Briefcase, DollarSign, Bell, Shield, Moon, Sun, LogOut, Crown, ExternalLink, Github, Linkedin, Globe, MessageCircle, Mail } from 'lucide-react-native';
+import {
+  Settings,
+  Edit3,
+  Star,
+  Users,
+  Mic,
+  Crown,
+  ExternalLink,
+  Github,
+  Linkedin,
+  Globe,
+  LogOut,
+  Bell,
+  Shield,
+  Moon,
+  Sun,
+  Download,
+  Share2,
+} from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const { width } = Dimensions.get('window');
+import { router } from 'expo-router';
 
 const mockUserStats = {
-  projectsCreated: 8,
-  collaborations: 23,
-  totalFunding: 125000,
-  successRate: 78,
+  episodesCreated: 12,
+  totalPlays: 8547,
+  totalLikes: 234,
+  followers: 89,
   rating: 4.8,
-  reviews: 47,
+  reviews: 23,
 };
 
 export default function Profile() {
@@ -57,63 +72,16 @@ export default function Profile() {
     Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
   };
 
-  const handleSettings = () => {
-    Alert.alert('Settings', 'Settings page coming soon!');
-  };
-
-  const handlePrivacySecurity = () => {
-    Alert.alert('Privacy & Security', 'Privacy settings coming soon!');
-  };
-
   const handleUpgrade = () => {
     router.push('/upgrade');
   };
 
-  const handleSocialLink = (platform: string) => {
-    Alert.alert('Social Link', `Opening ${platform} profile...`);
+  const handleCreateDomain = () => {
+    Alert.alert('Custom Domain', 'Create your custom podcast website at username.mypodsnap.tech');
   };
 
-  const handleSendMessage = () => {
-    router.push('/messaging/self');
-  };
-
-  const handleSubscriptionManagement = () => {
-    router.push('/subscription-management');
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'founder':
-        return <Briefcase size={20} color={colors.primary} />;
-      case 'freelancer':
-        return <Users size={20} color={colors.primary} />;
-      case 'investor':
-        return <DollarSign size={20} color={colors.primary} />;
-      default:
-        return <Users size={20} color={colors.primary} />;
-    }
-  };
-
-  const getSubscriptionBadge = () => {
-    if (profile?.subscription_tier === 'pro') {
-      return (
-        <View style={styles.proBadge}>
-          <Crown size={16} color="#FFD700" />
-          <Text style={styles.proText}>PRO</Text>
-        </View>
-      );
-    }
-    return null;
-  };
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
-    } else {
-      return `$${amount.toLocaleString()}`;
-    }
+  const handleExportEpisodes = () => {
+    Alert.alert('Export Episodes', 'Download all your episodes as audio/video files.');
   };
 
   const getInitials = (name: string) => {
@@ -123,6 +91,16 @@ export default function Profile() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`;
+    } else {
+      return num.toString();
+    }
   };
 
   const styles = StyleSheet.create({
@@ -204,22 +182,6 @@ export default function Profile() {
       color: '#FFD700',
       marginLeft: 4,
     },
-    roleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.primary + '20',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      marginBottom: 16,
-    },
-    roleText: {
-      fontSize: 16,
-      fontFamily: 'Inter-SemiBold',
-      color: colors.primary,
-      marginLeft: 8,
-      textTransform: 'capitalize',
-    },
     bio: {
       fontSize: 16,
       fontFamily: 'Inter-Regular',
@@ -257,7 +219,7 @@ export default function Profile() {
       flex: 1,
       marginRight: 8,
     },
-    messageButton: {
+    domainButton: {
       backgroundColor: colors.surface,
       paddingVertical: 12,
       paddingHorizontal: 24,
@@ -274,7 +236,7 @@ export default function Profile() {
       color: '#FFFFFF',
       marginLeft: 8,
     },
-    messageButtonText: {
+    domainButtonText: {
       fontSize: 16,
       fontFamily: 'Inter-SemiBold',
       color: colors.text,
@@ -289,7 +251,7 @@ export default function Profile() {
       justifyContent: 'space-between',
     },
     statCard: {
-      width: (width - 60) / 2,
+      width: '48%',
       backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
@@ -362,13 +324,6 @@ export default function Profile() {
       color: colors.text,
       marginLeft: 16,
     },
-    menuItemSubtext: {
-      fontSize: 14,
-      fontFamily: 'Inter-Regular',
-      color: colors.textSecondary,
-      marginLeft: 16,
-      marginTop: 2,
-    },
     themeToggle: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -397,7 +352,7 @@ export default function Profile() {
       >
         <View style={styles.headerTop}>
           <Text style={styles.title}>Profile</Text>
-          <TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
+          <TouchableOpacity style={styles.settingsButton}>
             <Settings size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -412,48 +367,27 @@ export default function Profile() {
 
             <View style={styles.nameContainer}>
               <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
-              {getSubscriptionBadge()}
+              {profile?.tier === 'pro' && (
+                <View style={styles.proBadge}>
+                  <Crown size={16} color="#FFD700" />
+                  <Text style={styles.proText}>PRO</Text>
+                </View>
+              )}
             </View>
 
-            <View style={styles.roleContainer}>
-              {getRoleIcon(profile?.role || 'founder')}
-              <Text style={styles.roleText}>{profile?.role || 'Founder'}</Text>
-            </View>
-
-            {profile?.bio && (
-              <Text style={styles.bio}>{profile.bio}</Text>
-            )}
+            <Text style={styles.bio}>
+              {profile?.bio || 'Podcast creator passionate about sharing stories and insights through AI-powered content.'}
+            </Text>
 
             <View style={styles.socialLinks}>
-              {profile?.github_url && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLink('GitHub')}
-                >
-                  <Github size={20} color={colors.text} />
-                </TouchableOpacity>
-              )}
-              {profile?.linkedin_url && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLink('LinkedIn')}
-                >
-                  <Linkedin size={20} color={colors.text} />
-                </TouchableOpacity>
-              )}
-              {profile?.website && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLink('Website')}
-                >
-                  <Globe size={20} color={colors.text} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLink('Email')}
-              >
-                <Mail size={20} color={colors.text} />
+              <TouchableOpacity style={styles.socialButton}>
+                <Github size={20} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialButton}>
+                <Linkedin size={20} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialButton}>
+                <Globe size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -463,9 +397,9 @@ export default function Profile() {
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.messageButton} onPress={handleSendMessage}>
-                <MessageCircle size={18} color={colors.text} />
-                <Text style={styles.messageButtonText}>Message</Text>
+              <TouchableOpacity style={styles.domainButton} onPress={handleCreateDomain}>
+                <Globe size={18} color={colors.text} />
+                <Text style={styles.domainButtonText}>My Domain</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -475,16 +409,16 @@ export default function Profile() {
       <ScrollView style={styles.statsContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{mockUserStats.projectsCreated}</Text>
-            <Text style={styles.statLabel}>Projects Created</Text>
+            <Text style={styles.statValue}>{mockUserStats.episodesCreated}</Text>
+            <Text style={styles.statLabel}>Episodes Created</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{mockUserStats.collaborations}</Text>
-            <Text style={styles.statLabel}>Collaborations</Text>
+            <Text style={styles.statValue}>{formatNumber(mockUserStats.totalPlays)}</Text>
+            <Text style={styles.statLabel}>Total Plays</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{formatCurrency(mockUserStats.totalFunding)}</Text>
-            <Text style={styles.statLabel}>Total Funding</Text>
+            <Text style={styles.statValue}>{formatNumber(mockUserStats.totalLikes)}</Text>
+            <Text style={styles.statLabel}>Total Likes</Text>
           </View>
           <View style={styles.statCard}>
             <View style={styles.ratingContainer}>
@@ -496,19 +430,14 @@ export default function Profile() {
         </View>
 
         <View style={styles.menuContainer}>
-          {profile?.subscription_tier === 'free' && (
+          {profile?.tier === 'free' && (
             <View style={styles.menuSection}>
               <TouchableOpacity style={[styles.menuItem, styles.upgradeButton]} onPress={handleUpgrade}>
                 <View style={styles.menuItemLeft}>
                   <Crown size={24} color={colors.warning} />
-                  <View>
-                    <Text style={[styles.menuItemText, styles.upgradeText]}>
-                      Upgrade to Pro
-                    </Text>
-                    <Text style={styles.menuItemSubtext}>
-                      Unlock premium features and AI matching
-                    </Text>
-                  </View>
+                  <Text style={[styles.menuItemText, styles.upgradeText]}>
+                    Upgrade to Pro
+                  </Text>
                 </View>
                 <ExternalLink size={20} color={colors.warning} />
               </TouchableOpacity>
@@ -516,12 +445,20 @@ export default function Profile() {
           )}
 
           <View style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>Account</Text>
+            <Text style={styles.sectionTitle}>Content</Text>
             
-            <TouchableOpacity style={styles.menuItem} onPress={handleSubscriptionManagement}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleExportEpisodes}>
               <View style={styles.menuItemLeft}>
-                <Crown size={24} color={colors.text} />
-                <Text style={styles.menuItemText}>Subscription Management</Text>
+                <Download size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Export Episodes</Text>
+              </View>
+              <ExternalLink size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem}>
+              <View style={styles.menuItemLeft}>
+                <Share2 size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Share Profile</Text>
               </View>
               <ExternalLink size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -562,7 +499,7 @@ export default function Profile() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} onPress={handlePrivacySecurity}>
+            <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuItemLeft}>
                 <Shield size={24} color={colors.text} />
                 <Text style={styles.menuItemText}>Privacy & Security</Text>
