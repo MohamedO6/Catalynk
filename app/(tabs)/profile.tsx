@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, Edit3, Star, Award, Users, Briefcase, DollarSign, Bell, Shield, Moon, Sun, LogOut, Crown, ExternalLink, Github, Linkedin, Globe, MessageCircle, Mail } from 'lucide-react-native';
+import { Settings, CreditCard as Edit3, Star, Award, Users, Briefcase, DollarSign, Bell, Shield, Moon, Sun, LogOut, Crown, ExternalLink, Github, Linkedin, Globe, MessageCircle, Mail } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
