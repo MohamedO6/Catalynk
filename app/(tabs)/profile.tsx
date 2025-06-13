@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, CreditCard as Edit3, Star, Award, Users, Briefcase, DollarSign, Bell, Shield, Moon, Sun, LogOut, Crown, ExternalLink, Github, Linkedin, Globe, MessageCircle, Mail } from 'lucide-react-native';
+import { Settings, Edit3, Star, Award, Users, Briefcase, DollarSign, Bell, Shield, Moon, Sun, LogOut, Crown, ExternalLink, Github, Linkedin, Globe, MessageCircle, Mail } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -74,7 +74,11 @@ export default function Profile() {
   };
 
   const handleSendMessage = () => {
-    Alert.alert('Send Message', 'Messaging feature coming soon!');
+    router.push('/messaging/self');
+  };
+
+  const handleSubscriptionManagement = () => {
+    router.push('/subscription-management');
   };
 
   const getRoleIcon = (role: string) => {
@@ -510,6 +514,18 @@ export default function Profile() {
               </TouchableOpacity>
             </View>
           )}
+
+          <View style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            
+            <TouchableOpacity style={styles.menuItem} onPress={handleSubscriptionManagement}>
+              <View style={styles.menuItemLeft}>
+                <Crown size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Subscription Management</Text>
+              </View>
+              <ExternalLink size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.menuSection}>
             <Text style={styles.sectionTitle}>Preferences</Text>

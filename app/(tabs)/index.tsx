@@ -30,6 +30,9 @@ import {
   Star,
   MapPin,
   Clock,
+  Settings,
+  UserPlus,
+  Zap,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -204,8 +207,20 @@ export default function Home() {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      router.push(`/projects?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/(tabs)/projects?search=${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  const handleFreelancerMatching = () => {
+    router.push('/freelancer-matching');
+  };
+
+  const handleSubscriptionManagement = () => {
+    router.push('/subscription-management');
+  };
+
+  const handleNotifications = () => {
+    Alert.alert('Notifications', 'You have 3 new notifications!');
   };
 
   const formatCurrency = (amount: number) => {
@@ -298,6 +313,7 @@ export default function Home() {
       flexDirection: 'row',
       paddingHorizontal: 20,
       marginBottom: 30,
+      gap: 12,
     },
     quickActionButton: {
       flex: 1,
@@ -308,10 +324,27 @@ export default function Home() {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    secondaryActionButton: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 16,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     quickActionText: {
-      fontSize: 16,
+      fontSize: 14,
       fontFamily: 'Inter-SemiBold',
       color: '#FFFFFF',
+      marginLeft: 8,
+    },
+    secondaryActionText: {
+      fontSize: 14,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.text,
       marginLeft: 8,
     },
     statsContainer: {
@@ -602,7 +635,7 @@ export default function Home() {
                 <Text style={styles.upgradeText}>Upgrade</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.notificationButton}>
+            <TouchableOpacity style={styles.notificationButton} onPress={handleNotifications}>
               <Bell size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -624,14 +657,22 @@ export default function Home() {
         </View>
       </LinearGradient>
 
-      {profile?.role === 'founder' && (
-        <View style={styles.quickActions}>
+      <View style={styles.quickActions}>
+        {profile?.role === 'founder' && (
           <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateProject}>
             <Plus size={20} color="#FFFFFF" />
             <Text style={styles.quickActionText}>Create Project</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+        <TouchableOpacity style={styles.secondaryActionButton} onPress={handleFreelancerMatching}>
+          <UserPlus size={20} color={colors.text} />
+          <Text style={styles.secondaryActionText}>Find Talent</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryActionButton} onPress={handleSubscriptionManagement}>
+          <Settings size={20} color={colors.text} />
+          <Text style={styles.secondaryActionText}>Subscription</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.statsContainer}>
@@ -767,7 +808,7 @@ export default function Home() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>AI-Powered Matches</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={handleFreelancerMatching}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
