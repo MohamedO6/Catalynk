@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
+  Image,
+  Alert,
 } from 'react-native';
+import { router } from 'expo-router';
 import {
   Search,
   Filter,
@@ -17,62 +20,36 @@ import {
   Clock,
   MapPin,
   Star,
+  Users,
+  Play,
+  Volume2,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
-const mockProjects = [
-  {
-    id: '1',
-    title: 'AI-Powered Personal Finance Manager',
-    description: 'Revolutionary fintech app that uses machine learning to provide personalized financial advice and automated savings strategies.',
-    category: 'Fintech',
-    founder: 'Sarah Chen',
-    location: 'San Francisco, CA',
-    funding: 75000,
-    target: 150000,
-    progress: 50,
-    timeLeft: '23 days',
-    tags: ['AI', 'Machine Learning', 'Finance', 'Mobile App'],
-    teamSize: 5,
-    rating: 4.8,
-    liked: false,
-  },
-  {
-    id: '2',
-    title: 'Sustainable Urban Farming Platform',
-    description: 'IoT-enabled vertical farming solution for urban environments, making fresh produce accessible in city centers.',
-    category: 'AgTech',
-    founder: 'Marcus Johnson',
-    location: 'Austin, TX',
-    funding: 125000,
-    target: 200000,
-    progress: 62,
-    timeLeft: '18 days',
-    tags: ['IoT', 'Sustainability', 'Agriculture', 'Hardware'],
-    teamSize: 8,
-    rating: 4.6,
-    liked: true,
-  },
-  {
-    id: '3',
-    title: 'Virtual Reality Therapy Platform',
-    description: 'Immersive VR experiences designed to help patients overcome phobias and anxiety disorders through controlled exposure therapy.',
-    category: 'HealthTech',
-    founder: 'Dr. Emily Rodriguez',
-    location: 'Boston, MA',
-    funding: 90000,
-    target: 250000,
-    progress: 36,
-    timeLeft: '31 days',
-    tags: ['VR', 'Healthcare', 'Mental Health', 'Therapy'],
-    teamSize: 6,
-    rating: 4.9,
-    liked: false,
-  },
-];
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  founder_id: string;
+  funding_goal: number;
+  current_funding: number;
+  location?: string;
+  image_url?: string;
+  has_audio: boolean;
+  has_video: boolean;
+  tags: string[];
+  team_size: number;
+  created_at: string;
+  profiles: {
+    full_name: string;
+    avatar_url?: string;
+  };
+}
 
 const categories = ['All', 'Fintech', 'HealthTech', 'AgTech', 'EdTech', 'CleanTech', 'AI/ML'];
 
@@ -81,7 +58,46 @@ export default function Projects() {
   const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [likedProjects, setLikedProjects] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [selectedCategory]);
+
+  const fetchProjects = async () => {
+    try {
+      let query = supabase
+        .from('projects')
+        .select(`
+          *,
+          profiles:founder_id (
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (selectedCategory !== 'All') {
+        query = query.eq('category', selectedCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching projects:', error);
+        return;
+      }
+
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleLike = (projectId: string) => {
     setLikedProjects(prev =>
@@ -89,6 +105,44 @@ export default function Projects() {
         ? prev.filter(id => id !== projectId)
         : [...prev, projectId]
     );
+    Alert.alert('Liked', 'Project added to your favorites!');
+  };
+
+  const handleCreateProject = () => {
+    if (profile?.role !== 'founder') {
+      Alert.alert('Access Restricted', 'Only founders can create projects. Please update your profile role.');
+      return;
+    }
+    router.push('/create-project');
+  };
+
+  const handleProjectPress = (projectId: string) => {
+    router.push(`/project/${projectId}`);
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      // Filter projects by search query
+      const filtered = projects.filter(project =>
+        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setProjects(filtered);
+    } else {
+      fetchProjects();
+    }
+  };
+
+  const handlePlayAudio = (projectId: string) => {
+    Alert.alert('Audio Playing', 'Playing AI-generated pitch audio...');
+  };
+
+  const handlePlayVideo = (projectId: string) => {
+    Alert.alert('Video Playing', 'Opening AI-generated video introduction...');
+  };
+
+  const handleShare = (projectId: string) => {
+    Alert.alert('Share Project', 'Project link copied to clipboard!');
   };
 
   const getScreenTitle = () => {
@@ -102,6 +156,27 @@ export default function Projects() {
       default:
         return 'Projects';
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `$${amount}`;
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    return date.toLocaleDateString();
   };
 
   const styles = StyleSheet.create({
@@ -150,6 +225,9 @@ export default function Projects() {
       paddingVertical: 12,
       marginLeft: 12,
     },
+    searchButton: {
+      padding: 8,
+    },
     filterButton: {
       backgroundColor: colors.surface,
       padding: 12,
@@ -190,10 +268,17 @@ export default function Projects() {
     projectCard: {
       backgroundColor: colors.card,
       borderRadius: 16,
-      padding: 20,
       marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    projectImage: {
+      width: '100%',
+      height: 160,
+    },
+    projectContent: {
+      padding: 20,
     },
     projectHeader: {
       flexDirection: 'row',
@@ -223,6 +308,8 @@ export default function Projects() {
     actionButton: {
       padding: 8,
       marginLeft: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
     },
     projectDescription: {
       fontSize: 15,
@@ -326,17 +413,21 @@ export default function Projects() {
       color: colors.textSecondary,
       marginLeft: 4,
     },
+    loadingText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 40,
+    },
+    emptyText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 40,
+    },
   });
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
-    } else {
-      return `$${amount}`;
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -344,7 +435,7 @@ export default function Projects() {
         <View style={styles.headerTop}>
           <Text style={styles.title}>{getScreenTitle()}</Text>
           {profile?.role === 'founder' && (
-            <TouchableOpacity style={styles.createButton}>
+            <TouchableOpacity style={styles.createButton} onPress={handleCreateProject}>
               <Plus size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
@@ -359,7 +450,11 @@ export default function Projects() {
               placeholderTextColor={colors.textTertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
             />
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+              <Search size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.filterButton}>
             <Filter size={20} color={colors.text} />
@@ -396,86 +491,133 @@ export default function Projects() {
       </View>
 
       <ScrollView style={styles.projectsContainer} showsVerticalScrollIndicator={false}>
-        {mockProjects.map((project) => {
-          const isLiked = likedProjects.includes(project.id);
-          
-          return (
-            <TouchableOpacity key={project.id} style={styles.projectCard}>
-              <View style={styles.projectHeader}>
-                <View style={styles.projectTitleContainer}>
-                  <Text style={styles.projectTitle}>{project.title}</Text>
-                  <Text style={styles.projectFounder}>by {project.founder}</Text>
-                </View>
-                <View style={styles.projectActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => toggleLike(project.id)}
-                  >
-                    <Heart
-                      size={20}
-                      color={isLiked ? colors.error : colors.textSecondary}
-                      fill={isLiked ? colors.error : 'none'}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Share2 size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={styles.projectDescription}>{project.description}</Text>
-
-              <View style={styles.projectMeta}>
-                <View style={styles.metaItem}>
-                  <MapPin size={16} color={colors.textSecondary} />
-                  <Text style={styles.metaText}>{project.location}</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Clock size={16} color={colors.textSecondary} />
-                  <Text style={styles.metaText}>{project.timeLeft} left</Text>
-                </View>
-              </View>
-
-              <View style={styles.fundingContainer}>
-                <View style={styles.fundingHeader}>
-                  <Text style={styles.fundingAmount}>
-                    {formatCurrency(project.funding)} raised
-                  </Text>
-                  <Text style={styles.fundingTarget}>
-                    of {formatCurrency(project.target)} goal
-                  </Text>
-                </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${project.progress}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>{project.progress}% funded</Text>
-              </View>
-
-              <View style={styles.tagsContainer}>
-                {project.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
+        {loading ? (
+          <Text style={styles.loadingText}>Loading projects...</Text>
+        ) : projects.length === 0 ? (
+          <Text style={styles.emptyText}>No projects found. Be the first to create one!</Text>
+        ) : (
+          projects.map((project) => {
+            const isLiked = likedProjects.includes(project.id);
+            const progress = project.funding_goal > 0 
+              ? Math.round((project.current_funding / project.funding_goal) * 100)
+              : 0;
+            
+            return (
+              <TouchableOpacity 
+                key={project.id} 
+                style={styles.projectCard}
+                onPress={() => handleProjectPress(project.id)}
+              >
+                {project.image_url && (
+                  <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+                )}
+                
+                <View style={styles.projectContent}>
+                  <View style={styles.projectHeader}>
+                    <View style={styles.projectTitleContainer}>
+                      <Text style={styles.projectTitle}>{project.title}</Text>
+                      <Text style={styles.projectFounder}>by {project.profiles?.full_name || 'Unknown'}</Text>
+                    </View>
+                    <View style={styles.projectActions}>
+                      {project.has_audio && (
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handlePlayAudio(project.id)}
+                        >
+                          <Volume2 size={16} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      )}
+                      {project.has_video && (
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handlePlayVideo(project.id)}
+                        >
+                          <Play size={16} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => toggleLike(project.id)}
+                      >
+                        <Heart
+                          size={16}
+                          color={isLiked ? colors.error : colors.textSecondary}
+                          fill={isLiked ? colors.error : 'none'}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleShare(project.id)}
+                      >
+                        <Share2 size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                ))}
-              </View>
 
-              <View style={styles.projectFooter}>
-                <View style={styles.teamInfo}>
-                  <Text style={styles.teamText}>{project.teamSize} team members</Text>
+                  <Text style={styles.projectDescription} numberOfLines={3}>
+                    {project.description}
+                  </Text>
+
+                  <View style={styles.projectMeta}>
+                    {project.location && (
+                      <View style={styles.metaItem}>
+                        <MapPin size={16} color={colors.textSecondary} />
+                        <Text style={styles.metaText}>{project.location}</Text>
+                      </View>
+                    )}
+                    <View style={styles.metaItem}>
+                      <Clock size={16} color={colors.textSecondary} />
+                      <Text style={styles.metaText}>{formatTimeAgo(project.created_at)}</Text>
+                    </View>
+                  </View>
+
+                  {project.funding_goal > 0 && (
+                    <View style={styles.fundingContainer}>
+                      <View style={styles.fundingHeader}>
+                        <Text style={styles.fundingAmount}>
+                          {formatCurrency(project.current_funding)} raised
+                        </Text>
+                        <Text style={styles.fundingTarget}>
+                          of {formatCurrency(project.funding_goal)} goal
+                        </Text>
+                      </View>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${Math.min(progress, 100)}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.progressText}>{progress}% funded</Text>
+                    </View>
+                  )}
+
+                  {project.tags && project.tags.length > 0 && (
+                    <View style={styles.tagsContainer}>
+                      {project.tags.slice(0, 3).map((tag, index) => (
+                        <View key={index} style={styles.tag}>
+                          <Text style={styles.tagText}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.projectFooter}>
+                    <View style={styles.teamInfo}>
+                      <Users size={16} color={colors.textSecondary} />
+                      <Text style={styles.teamText}>{project.team_size} team members</Text>
+                    </View>
+                    <View style={styles.rating}>
+                      <Star size={16} color={colors.warning} fill={colors.warning} />
+                      <Text style={styles.ratingText}>4.8</Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.rating}>
-                  <Star size={16} color={colors.warning} fill={colors.warning} />
-                  <Text style={styles.ratingText}>{project.rating}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );

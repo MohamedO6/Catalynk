@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   Switch,
   Dimensions,
+  Alert,
 } from 'react-native';
+import { router } from 'expo-router';
 import {
   Settings,
   Edit3,
@@ -26,6 +28,8 @@ import {
   Github,
   Linkedin,
   Globe,
+  MessageCircle,
+  Mail,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,7 +52,49 @@ export default function Profile() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleSignOut = async () => {
-    await signOut();
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/welcome');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditProfile = () => {
+    Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
+  };
+
+  const handleSettings = () => {
+    Alert.alert('Settings', 'Settings page coming soon!');
+  };
+
+  const handlePrivacySecurity = () => {
+    Alert.alert('Privacy & Security', 'Privacy settings coming soon!');
+  };
+
+  const handleUpgrade = () => {
+    router.push('/upgrade');
+  };
+
+  const handleSocialLink = (platform: string) => {
+    Alert.alert('Social Link', `Opening ${platform} profile...`);
+  };
+
+  const handleSendMessage = () => {
+    Alert.alert('Send Message', 'Messaging feature coming soon!');
   };
 
   const getRoleIcon = (role: string) => {
@@ -74,6 +120,25 @@ export default function Profile() {
       );
     }
     return null;
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `$${amount.toLocaleString()}`;
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const styles = StyleSheet.create({
@@ -193,6 +258,10 @@ export default function Profile() {
       alignItems: 'center',
       marginHorizontal: 8,
     },
+    actionButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
     editButton: {
       backgroundColor: colors.primary,
       paddingVertical: 12,
@@ -201,11 +270,30 @@ export default function Profile() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      flex: 1,
+      marginRight: 8,
+    },
+    messageButton: {
+      backgroundColor: colors.surface,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 1,
+      marginLeft: 8,
     },
     editButtonText: {
       fontSize: 16,
       fontFamily: 'Inter-SemiBold',
       color: '#FFFFFF',
+      marginLeft: 8,
+    },
+    messageButtonText: {
+      fontSize: 16,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.text,
       marginLeft: 8,
     },
     statsContainer: {
@@ -317,25 +405,6 @@ export default function Profile() {
     },
   });
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(0)}K`;
-    } else {
-      return `$${amount.toLocaleString()}`;
-    }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -344,7 +413,7 @@ export default function Profile() {
       >
         <View style={styles.headerTop}>
           <Text style={styles.title}>Profile</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
             <Settings size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -373,26 +442,48 @@ export default function Profile() {
 
             <View style={styles.socialLinks}>
               {profile?.github_url && (
-                <TouchableOpacity style={styles.socialButton}>
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialLink('GitHub')}
+                >
                   <Github size={20} color={colors.text} />
                 </TouchableOpacity>
               )}
               {profile?.linkedin_url && (
-                <TouchableOpacity style={styles.socialButton}>
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialLink('LinkedIn')}
+                >
                   <Linkedin size={20} color={colors.text} />
                 </TouchableOpacity>
               )}
               {profile?.website && (
-                <TouchableOpacity style={styles.socialButton}>
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialLink('Website')}
+                >
                   <Globe size={20} color={colors.text} />
                 </TouchableOpacity>
               )}
+              <TouchableOpacity 
+                style={styles.socialButton}
+                onPress={() => handleSocialLink('Email')}
+              >
+                <Mail size={20} color={colors.text} />
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.editButton}>
-              <Edit3 size={18} color="#FFFFFF" />
-              <Text style={styles.editButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+                <Edit3 size={18} color="#FFFFFF" />
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.messageButton} onPress={handleSendMessage}>
+                <MessageCircle size={18} color={colors.text} />
+                <Text style={styles.messageButtonText}>Message</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -423,7 +514,7 @@ export default function Profile() {
         <View style={styles.menuContainer}>
           {profile?.subscription_tier === 'free' && (
             <View style={styles.menuSection}>
-              <TouchableOpacity style={[styles.menuItem, styles.upgradeButton]}>
+              <TouchableOpacity style={[styles.menuItem, styles.upgradeButton]} onPress={handleUpgrade}>
                 <View style={styles.menuItemLeft}>
                   <Crown size={24} color={colors.warning} />
                   <View>
@@ -475,7 +566,7 @@ export default function Profile() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity style={styles.menuItem} onPress={handlePrivacySecurity}>
               <View style={styles.menuItemLeft}>
                 <Shield size={24} color={colors.text} />
                 <Text style={styles.menuItemText}>Privacy & Security</Text>
