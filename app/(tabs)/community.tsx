@@ -9,7 +9,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Play, Heart, MoreHorizontal, Filter } from 'lucide-react-native';
+import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Play, Heart, MoveHorizontal as MoreHorizontal, Filter } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface CommunityPost {
