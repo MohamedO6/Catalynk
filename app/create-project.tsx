@@ -246,13 +246,20 @@ export default function CreateProject() {
         break;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
+  };
+
+  const isStepValid = (step: number) => {
+    const validationErrors = validateStep(step);
+    return Object.keys(validationErrors).length === 0;
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep)) {
+    const validationErrors = validateStep(currentStep);
+    if (Object.keys(validationErrors).length === 0) {
       setCurrentStep(prev => Math.min(prev + 1, 4));
+    } else {
+      setErrors(validationErrors);
     }
   };
 
@@ -261,7 +268,9 @@ export default function CreateProject() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(currentStep)) {
+    const validationErrors = validateStep(currentStep);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
@@ -1081,10 +1090,10 @@ export default function CreateProject() {
               style={[
                 styles.navButton,
                 styles.nextButton,
-                !validateStep(currentStep) && styles.navButtonDisabled
+                !isStepValid(currentStep) && styles.navButtonDisabled
               ]}
               onPress={nextStep}
-              disabled={!validateStep(currentStep)}
+              disabled={!isStepValid(currentStep)}
             >
               <Text style={[styles.navButtonText, styles.nextButtonText]}>Next</Text>
             </TouchableOpacity>
