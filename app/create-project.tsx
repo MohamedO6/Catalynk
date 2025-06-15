@@ -87,12 +87,14 @@ export default function CreateProject() {
         // Limit to 100 characters
         if (value.length > 100) {
           setErrors(prev => ({ ...prev, [field]: 'Title must be 100 characters or less' }));
+          return; // Don't update if over limit
         }
         break;
       case 'description':
         // Limit to 500 characters
         if (value.length > 500) {
           setErrors(prev => ({ ...prev, [field]: 'Description must be 500 characters or less' }));
+          return; // Don't update if over limit
         }
         break;
       case 'problem':
@@ -102,6 +104,7 @@ export default function CreateProject() {
         // Limit to 1000 characters
         if (value.length > 1000) {
           setErrors(prev => ({ ...prev, [field]: 'This field must be 1000 characters or less' }));
+          return; // Don't update if over limit
         }
         break;
       case 'competition':
@@ -110,6 +113,7 @@ export default function CreateProject() {
         // Limit to 800 characters
         if (value.length > 800) {
           setErrors(prev => ({ ...prev, [field]: 'This field must be 800 characters or less' }));
+          return; // Don't update if over limit
         }
         break;
     }
@@ -340,7 +344,7 @@ export default function CreateProject() {
         break;
 
       case 4:
-        // Optional validations for step 4
+        // Step 4 is optional, no validation needed
         break;
     }
 
@@ -356,6 +360,7 @@ export default function CreateProject() {
     const validationErrors = validateStep(currentStep);
     if (Object.keys(validationErrors).length === 0) {
       setCurrentStep(prev => Math.min(prev + 1, 4));
+      setErrors({}); // Clear any existing errors
     } else {
       setErrors(validationErrors);
     }
@@ -363,12 +368,22 @@ export default function CreateProject() {
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
+    setErrors({}); // Clear errors when going back
   };
 
   const handleSubmit = async () => {
-    const validationErrors = validateStep(currentStep);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    // Final validation before submission
+    const allErrors: Record<string, string> = {};
+    
+    // Validate all steps
+    for (let step = 1; step <= 3; step++) {
+      const stepErrors = validateStep(step);
+      Object.assign(allErrors, stepErrors);
+    }
+
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors);
+      Alert.alert('Validation Error', 'Please fix the errors in your form before submitting.');
       return;
     }
 
@@ -405,6 +420,8 @@ export default function CreateProject() {
         status: 'active',
       };
 
+      console.log('Submitting project data:', projectData);
+
       const { data, error } = await supabase
         .from('projects')
         .insert([projectData])
@@ -412,17 +429,19 @@ export default function CreateProject() {
         .single();
 
       if (error) {
-        console.error('Error creating project:', error);
-        Alert.alert('Error', 'Failed to create project. Please try again.');
+        console.error('Supabase error creating project:', error);
+        Alert.alert('Database Error', `Failed to create project: ${error.message}`);
         return;
       }
+
+      console.log('Project created successfully:', data);
 
       Alert.alert(
         'Project Created!',
         'Your project has been successfully created and is now live on the platform.',
         [
           {
-            text: 'View Project',
+            text: 'View Projects',
             onPress: () => {
               router.replace('/(tabs)/projects');
             }
@@ -430,8 +449,8 @@ export default function CreateProject() {
         ]
       );
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'Failed to create project. Please try again.');
+      console.error('Unexpected error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -1160,6 +1179,7 @@ export default function CreateProject() {
       paddingVertical: 20,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+      backgroundColor: colors.background,
     },
     navButton: {
       flex: 1,
@@ -1224,47 +1244,47 @@ export default function CreateProject() {
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}
         {currentStep === 4 && renderStep4()}
-
-        <View style={styles.navigationContainer}>
-          {currentStep > 1 && (
-            <TouchableOpacity
-              style={[styles.navButton, styles.prevButton]}
-              onPress={prevStep}
-            >
-              <Text style={[styles.navButtonText, styles.prevButtonText]}>Previous</Text>
-            </TouchableOpacity>
-          )}
-
-          {currentStep < 4 ? (
-            <TouchableOpacity
-              style={[
-                styles.navButton,
-                styles.nextButton,
-                !isStepValid(currentStep) && styles.navButtonDisabled
-              ]}
-              onPress={nextStep}
-              disabled={!isStepValid(currentStep)}
-            >
-              <Text style={[styles.navButtonText, styles.nextButtonText]}>Next</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.navButton,
-                styles.submitButton,
-                loading && styles.navButtonDisabled
-              ]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <Text style={[styles.navButtonText, styles.submitButtonText]}>
-                {loading ? 'Creating...' : 'Create Project'}
-              </Text>
-              {loading && <ActivityIndicator size="small" color="#FFFFFF" />}
-            </TouchableOpacity>
-          )}
-        </View>
       </ScrollView>
+
+      <View style={styles.navigationContainer}>
+        {currentStep > 1 && (
+          <TouchableOpacity
+            style={[styles.navButton, styles.prevButton]}
+            onPress={prevStep}
+          >
+            <Text style={[styles.navButtonText, styles.prevButtonText]}>Previous</Text>
+          </TouchableOpacity>
+        )}
+
+        {currentStep < 4 ? (
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              styles.nextButton,
+              !isStepValid(currentStep) && styles.navButtonDisabled
+            ]}
+            onPress={nextStep}
+            disabled={!isStepValid(currentStep)}
+          >
+            <Text style={[styles.navButtonText, styles.nextButtonText]}>Next</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              styles.submitButton,
+              loading && styles.navButtonDisabled
+            ]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={[styles.navButtonText, styles.submitButtonText]}>
+              {loading ? 'Creating...' : 'Create Project'}
+            </Text>
+            {loading && <ActivityIndicator size="small" color="#FFFFFF" />}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
