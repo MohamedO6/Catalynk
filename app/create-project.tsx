@@ -81,14 +81,12 @@ export default function CreateProject() {
         // Limit to 100 characters
         if (value.length > 100) {
           setErrors(prev => ({ ...prev, [field]: 'Title must be 100 characters or less' }));
-          return;
         }
         break;
       case 'description':
         // Limit to 500 characters
         if (value.length > 500) {
           setErrors(prev => ({ ...prev, [field]: 'Description must be 500 characters or less' }));
-          return;
         }
         break;
       case 'problem':
@@ -98,7 +96,6 @@ export default function CreateProject() {
         // Limit to 1000 characters
         if (value.length > 1000) {
           setErrors(prev => ({ ...prev, [field]: 'This field must be 1000 characters or less' }));
-          return;
         }
         break;
       case 'competition':
@@ -107,7 +104,6 @@ export default function CreateProject() {
         // Limit to 800 characters
         if (value.length > 800) {
           setErrors(prev => ({ ...prev, [field]: 'This field must be 800 characters or less' }));
-          return;
         }
         break;
     }
