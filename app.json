@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Catalynk",
-    "slug": "catalynk",
+    "name": "PodSnap",
+    "slug": "podsnap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.catalynk.app"
+      "bundleIdentifier": "com.podsnap.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#8B5CF6"
       },
-      "package": "com.catalynk.app"
+      "package": "com.podsnap.app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
@@ -36,13 +36,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Catalynk to access your camera to create project content."
+          "cameraPermission": "Allow PodSnap to access your camera to create video content."
         }
       ],
       [
         "expo-av",
         {
-          "microphonePermission": "Allow Catalynk to access your microphone to record audio."
+          "microphonePermission": "Allow PodSnap to access your microphone to record audio."
         }
       ]
     ],
