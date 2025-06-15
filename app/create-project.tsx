@@ -162,24 +162,6 @@ export default function CreateProject() {
         status: 'active',
       };
 
-      // For demo purposes, simulate successful creation
-      setTimeout(() => {
-        Alert.alert(
-          'Project Created!',
-          'Your project has been successfully created and is now live on the platform.',
-          [
-            {
-              text: 'View Project',
-              onPress: () => {
-                router.replace('/(tabs)/projects');
-              }
-            }
-          ]
-        );
-        setLoading(false);
-      }, 2000);
-
-      /* Production code:
       const { data, error } = await supabase
         .from('projects')
         .insert([projectData])
@@ -204,10 +186,10 @@ export default function CreateProject() {
           }
         ]
       );
-      */
     } catch (error) {
       console.error('Error:', error);
       Alert.alert('Error', 'Failed to create project. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
