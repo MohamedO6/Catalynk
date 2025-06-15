@@ -1,4 +1,7 @@
 import { supabase } from './supabase';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+import { Platform } from 'react-native';
 
 export type UserRole = 'founder' | 'freelancer' | 'investor';
 export type UserTier = 'free' | 'pro';
@@ -20,6 +23,9 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
 }
+
+// Configure WebBrowser for OAuth
+WebBrowser.maybeCompleteAuthSession();
 
 export const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'founder') => {
   try {
@@ -51,6 +57,50 @@ export const signIn = async (email: string, password: string) => {
     return { data, error };
   } catch (error) {
     console.error('Sign in error:', error);
+    return { data: null, error };
+  }
+};
+
+export const signInWithOAuth = async (provider: 'google' | 'github') => {
+  try {
+    const redirectTo = makeRedirectUri({
+      path: '/auth/callback',
+    });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo,
+        skipBrowserRedirect: Platform.OS !== 'web',
+      },
+    });
+
+    if (Platform.OS !== 'web' && data?.url) {
+      // Open the OAuth URL in the browser for mobile
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo
+      );
+
+      if (result.type === 'success' && result.url) {
+        // Extract the URL parameters and set the session
+        const url = new URL(result.url);
+        const access_token = url.searchParams.get('access_token');
+        const refresh_token = url.searchParams.get('refresh_token');
+
+        if (access_token && refresh_token) {
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          return { data: sessionData, error: sessionError };
+        }
+      }
+    }
+
+    return { data, error };
+  } catch (error) {
+    console.error('OAuth sign in error:', error);
     return { data: null, error };
   }
 };
@@ -90,7 +140,23 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     
     return data;
   } catch (error) {
-    console.error('Get user profile error:', error);
+    console.error('Error:', error);
     return null;
+  }
+};
+
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return { data: null, error };
   }
 };

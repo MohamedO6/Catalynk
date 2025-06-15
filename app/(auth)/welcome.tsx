@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Zap, Github, Chrome, Linkedin } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { signInWithOAuth } from '@/lib/auth';
 
 const { width } = Dimensions.get('window');
 
@@ -36,13 +38,23 @@ export default function Welcome() {
     buttonsOpacity.value = withDelay(600, withSpring(1));
   }, []);
 
-  const handleSocialSignIn = async (provider: 'google' | 'github' | 'linkedin') => {
+  const handleSocialSignIn = async (provider: 'google' | 'github') => {
     setLoading(provider);
-    // Simulate OAuth flow
-    setTimeout(() => {
+    
+    try {
+      const { data, error } = await signInWithOAuth(provider);
+      
+      if (error) {
+        Alert.alert('Authentication Error', error.message);
+      } else if (data?.user) {
+        // Check if user has completed profile setup
+        router.replace('/(auth)/role-selection');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to authenticate. Please try again.');
+    } finally {
       setLoading(null);
-      router.replace('/(auth)/role-selection');
-    }, 2000);
+    }
   };
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
@@ -274,24 +286,6 @@ export default function Welcome() {
               )}
               <Text style={styles.socialButtonText}>
                 {loading === 'github' ? 'Connecting...' : 'Continue with GitHub'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[
-                styles.socialButton,
-                loading === 'linkedin' && styles.socialButtonDisabled
-              ]}
-              onPress={() => handleSocialSignIn('linkedin')}
-              disabled={loading === 'linkedin'}
-            >
-              {loading === 'linkedin' ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : (
-                <Linkedin size={24} color={colors.text} />
-              )}
-              <Text style={styles.socialButtonText}>
-                {loading === 'linkedin' ? 'Connecting...' : 'Continue with LinkedIn'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
