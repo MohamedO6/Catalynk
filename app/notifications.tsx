@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Bell, MessageCircle, Heart, Users, DollarSign, CheckCircle, Clock } from 'lucide-react-native';
+import { ArrowLeft, Bell, MessageCircle, Heart, Users, DollarSign, CircleCheck as CheckCircle, Clock } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
