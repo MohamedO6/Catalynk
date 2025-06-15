@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -65,6 +66,7 @@ export default function PitchOrDitchGame() {
   const [gameIdeas, setGameIdeas] = useState<GameIdea[]>([]);
   const [userScore, setUserScore] = useState<GameScore | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [lastVote, setLastVote] = useState<'pitch' | 'ditch' | null>(null);
 
@@ -92,6 +94,7 @@ export default function PitchOrDitchGame() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -207,6 +210,12 @@ export default function PitchOrDitchGame() {
     setShowResult(false);
     setLastVote(null);
     setCurrentIdeaIndex((prev) => (prev + 1) % gameIdeas.length);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchGameIdeas();
+    fetchUserScore();
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -619,7 +628,13 @@ export default function PitchOrDitchGame() {
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.gameContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.gameContainer} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {userScore && userScore.current_streak > 0 && (
           <View style={styles.streakContainer}>
             <Zap size={16} color={colors.warning} />
