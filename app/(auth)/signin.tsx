@@ -174,7 +174,7 @@ export default function SignIn() {
       >
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>
-          Sign in to continue creating amazing podcasts
+          Sign in to continue building the future
         </Text>
 
         <View style={styles.inputContainer}>

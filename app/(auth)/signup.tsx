@@ -65,7 +65,7 @@ export default function SignUp() {
       if (error) {
         Alert.alert('Error', error.message);
       } else if (data?.user) {
-        router.replace('/(tabs)');
+        router.replace('/(auth)/role-selection');
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -196,9 +196,9 @@ export default function SignUp() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Join PodSnap</Text>
+        <Text style={styles.title}>Join Catalynk</Text>
         <Text style={styles.subtitle}>
-          Start creating professional podcasts with AI
+          Start connecting with innovators, freelancers, and investors
         </Text>
 
         <View style={styles.inputContainer}>

@@ -83,6 +83,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       .eq('id', userId)
       .single();
     
+    if (error) {
+      console.error('Get user profile error:', error);
+      return null;
+    }
+    
     return data;
   } catch (error) {
     console.error('Get user profile error:', error);
