@@ -11,10 +11,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 const categories = [
   'FinTech', 'HealthTech', 'EdTech', 'CleanTech', 'AI/ML', 'Blockchain',
@@ -54,7 +56,11 @@ export default function CreateProject() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [hasAudio, setHasAudio] = useState(false);
   const [hasVideo, setHasVideo] = useState(false);
+  const [audioFile, setAudioFile] = useState<any>(null);
+  const [videoFile, setVideoFile] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [generatingVideo, setGeneratingVideo] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     // Clear error when user starts typing
@@ -143,26 +149,118 @@ export default function CreateProject() {
     });
   };
 
-  const selectImage = () => {
-    // Simulate image selection with sample images
-    const sampleImages = [
-      'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-      'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-      'https://images.pexels.com/photos/3184293/pexels-photo-3184293.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-      'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-      'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    ];
-    setSelectedImage(sampleImages[Math.floor(Math.random() * sampleImages.length)]);
+  const selectImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
   };
 
-  const generateAudio = () => {
-    setHasAudio(true);
-    Alert.alert('Audio Generated', 'Your project pitch has been converted to audio using ElevenLabs AI voice synthesis.');
+  const generateAudio = async () => {
+    if (!formData.pitch.trim()) {
+      Alert.alert('Missing Pitch', 'Please write your elevator pitch first to generate audio.');
+      return;
+    }
+
+    setGeneratingAudio(true);
+    
+    try {
+      // Simulate AI audio generation
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      setHasAudio(true);
+      setAudioFile({ uri: 'mock-audio-file', name: 'pitch-audio.mp3' });
+      Alert.alert('Audio Generated', 'Your project pitch has been converted to audio using AI voice synthesis.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate audio. Please try again.');
+    } finally {
+      setGeneratingAudio(false);
+    }
   };
 
-  const generateVideo = () => {
-    setHasVideo(true);
-    Alert.alert('Video Generated', 'A personalized video introduction has been created using Tavus AI video generation.');
+  const generateVideo = async () => {
+    if (!formData.pitch.trim()) {
+      Alert.alert('Missing Pitch', 'Please write your elevator pitch first to generate video.');
+      return;
+    }
+
+    setGeneratingVideo(true);
+    
+    try {
+      // Simulate AI video generation
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      setHasVideo(true);
+      setVideoFile({ uri: 'mock-video-file', name: 'pitch-video.mp4' });
+      Alert.alert('Video Generated', 'A personalized video introduction has been created using AI avatars.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate video. Please try again.');
+    } finally {
+      setGeneratingVideo(false);
+    }
+  };
+
+  const deleteAudio = () => {
+    Alert.alert(
+      'Delete Audio',
+      'Are you sure you want to delete the generated audio?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            setHasAudio(false);
+            setAudioFile(null);
+          }
+        }
+      ]
+    );
+  };
+
+  const deleteVideo = () => {
+    Alert.alert(
+      'Delete Video',
+      'Are you sure you want to delete the generated video?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            setHasVideo(false);
+            setVideoFile(null);
+          }
+        }
+      ]
+    );
+  };
+
+  const uploadFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', 'text/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const file = result.assets[0];
+        Alert.alert('File Selected', `Selected: ${file.name}`);
+        // Handle file upload logic here
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select file. Please try again.');
+    }
   };
 
   const validateStep = (step: number) => {
@@ -646,8 +744,8 @@ export default function CreateProject() {
 
   const renderStep4 = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Media & Tags</Text>
-      <Text style={styles.stepSubtitle}>Add visual content and tags to make your project stand out</Text>
+      <Text style={styles.stepTitle}>Media & Files</Text>
+      <Text style={styles.stepSubtitle}>Add visual content and files to make your project stand out</Text>
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Project Image</Text>
@@ -664,35 +762,63 @@ export default function CreateProject() {
       </View>
 
       <View style={styles.inputContainer}>
+        <Text style={styles.label}>Upload Files</Text>
+        <TouchableOpacity style={styles.fileUploadButton} onPress={uploadFile}>
+          <Upload size={20} color={colors.text} />
+          <Text style={styles.fileUploadText}>Upload Documents, PDFs, or Images</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.inputContainer}>
         <Text style={styles.label}>AI-Generated Content</Text>
         <View style={styles.aiContentContainer}>
-          <TouchableOpacity
-            style={[styles.aiButton, hasAudio && styles.aiButtonActive]}
-            onPress={generateAudio}
-          >
-            {hasAudio ? (
-              <CheckCircle size={20} color="#FFFFFF" />
-            ) : (
-              <Volume2 size={20} color={colors.textSecondary} />
+          <View style={styles.aiItemContainer}>
+            <TouchableOpacity
+              style={[styles.aiButton, hasAudio && styles.aiButtonActive]}
+              onPress={generateAudio}
+              disabled={generatingAudio}
+            >
+              {generatingAudio ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : hasAudio ? (
+                <CheckCircle size={20} color="#FFFFFF" />
+              ) : (
+                <Volume2 size={20} color={colors.textSecondary} />
+              )}
+              <Text style={[styles.aiButtonText, hasAudio && styles.aiButtonTextActive]}>
+                {generatingAudio ? 'Generating...' : hasAudio ? 'Audio Generated' : 'Generate Audio Pitch'}
+              </Text>
+            </TouchableOpacity>
+            {hasAudio && (
+              <TouchableOpacity style={styles.deleteButton} onPress={deleteAudio}>
+                <Trash2 size={16} color={colors.error} />
+              </TouchableOpacity>
             )}
-            <Text style={[styles.aiButtonText, hasAudio && styles.aiButtonTextActive]}>
-              {hasAudio ? 'Audio Generated' : 'Generate Audio Pitch'}
-            </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.aiButton, hasVideo && styles.aiButtonActive]}
-            onPress={generateVideo}
-          >
-            {hasVideo ? (
-              <CheckCircle size={20} color="#FFFFFF" />
-            ) : (
-              <Play size={20} color={colors.textSecondary} />
+          <View style={styles.aiItemContainer}>
+            <TouchableOpacity
+              style={[styles.aiButton, hasVideo && styles.aiButtonActive]}
+              onPress={generateVideo}
+              disabled={generatingVideo}
+            >
+              {generatingVideo ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : hasVideo ? (
+                <CheckCircle size={20} color="#FFFFFF" />
+              ) : (
+                <Play size={20} color={colors.textSecondary} />
+              )}
+              <Text style={[styles.aiButtonText, hasVideo && styles.aiButtonTextActive]}>
+                {generatingVideo ? 'Generating...' : hasVideo ? 'Video Generated' : 'Generate Video Intro'}
+              </Text>
+            </TouchableOpacity>
+            {hasVideo && (
+              <TouchableOpacity style={styles.deleteButton} onPress={deleteVideo}>
+                <Trash2 size={16} color={colors.error} />
+              </TouchableOpacity>
             )}
-            <Text style={[styles.aiButtonText, hasVideo && styles.aiButtonTextActive]}>
-              {hasVideo ? 'Video Generated' : 'Generate Video Intro'}
-            </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -937,9 +1063,28 @@ export default function CreateProject() {
       width: '100%',
       height: '100%',
     },
-    aiContentContainer: {
+    fileUploadButton: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: 16,
+    },
+    fileUploadText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.text,
+      marginLeft: 8,
+    },
+    aiContentContainer: {
+      gap: 12,
+    },
+    aiItemContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     aiButton: {
       flex: 1,
@@ -951,7 +1096,6 @@ export default function CreateProject() {
       borderColor: colors.border,
       borderRadius: 12,
       paddingVertical: 16,
-      marginHorizontal: 4,
     },
     aiButtonActive: {
       backgroundColor: colors.success,
@@ -965,6 +1109,12 @@ export default function CreateProject() {
     },
     aiButtonTextActive: {
       color: '#FFFFFF',
+    },
+    deleteButton: {
+      backgroundColor: colors.error + '20',
+      padding: 12,
+      borderRadius: 8,
+      marginLeft: 8,
     },
     tagInputContainer: {
       flexDirection: 'row',
