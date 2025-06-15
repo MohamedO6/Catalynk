@@ -134,7 +134,14 @@ export default function Home() {
   };
 
   const handleNotifications = () => {
-    Alert.alert('Notifications', 'You have 3 new notifications!');
+    Alert.alert(
+      'Notifications',
+      'You have 3 new notifications:\n\n• Sarah Chen liked your project\n• New investor joined EcoTrack\n• Weekly funding report available',
+      [
+        { text: 'Mark as Read', style: 'default' },
+        { text: 'View All', onPress: () => router.push('/notifications') }
+      ]
+    );
   };
 
   const formatNumber = (num: number) => {
@@ -176,6 +183,9 @@ export default function Home() {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
     },
     header: {
       paddingTop: 60,
@@ -228,6 +238,16 @@ export default function Home() {
       backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
+      position: 'relative',
+    },
+    notificationBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.error,
     },
     quickActions: {
       flexDirection: 'row',
@@ -472,43 +492,48 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.primary + '08', colors.background]}
-        style={styles.header}
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.headerTop, headerAnimatedStyle]}>
-          <View style={styles.greeting}>
-            <Text style={styles.title}>Welcome back!</Text>
-            <Text style={styles.subtitle}>
-              Ready to turn your next idea into reality?
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            {profile?.subscription_tier === 'free' && (
-              <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
-                <Crown size={16} color={colors.warning} />
-                <Text style={styles.upgradeText}>Upgrade</Text>
+        <LinearGradient
+          colors={[colors.primary + '08', colors.background]}
+          style={styles.header}
+        >
+          <Animated.View style={[styles.headerTop, headerAnimatedStyle]}>
+            <View style={styles.greeting}>
+              <Text style={styles.title}>Welcome back!</Text>
+              <Text style={styles.subtitle}>
+                Ready to turn your next idea into reality?
+              </Text>
+            </View>
+            <View style={styles.headerActions}>
+              {profile?.subscription_tier === 'free' && (
+                <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
+                  <Crown size={16} color={colors.warning} />
+                  <Text style={styles.upgradeText}>Upgrade</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.notificationButton} onPress={handleNotifications}>
+                <Bell size={20} color={colors.text} />
+                <View style={styles.notificationBadge} />
               </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.notificationButton} onPress={handleNotifications}>
-              <Bell size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </LinearGradient>
+            </View>
+          </Animated.View>
+        </LinearGradient>
 
-      <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateProject}>
-          <Plus size={20} color="#FFFFFF" />
-          <Text style={styles.quickActionText}>Create Project</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryActionButton}>
-          <Search size={20} color={colors.text} />
-          <Text style={styles.secondaryActionText}>Discover</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateProject}>
+            <Plus size={20} color="#FFFFFF" />
+            <Text style={styles.quickActionText}>Create Project</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryActionButton}>
+            <Search size={20} color={colors.text} />
+            <Text style={styles.secondaryActionText}>Discover</Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.statsContainer, statsAnimatedStyle]}>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>

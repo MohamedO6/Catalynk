@@ -58,6 +58,35 @@ interface ProjectDetails {
   };
 }
 
+// Mock project data for demo
+const mockProject: ProjectDetails = {
+  id: '1',
+  title: 'EcoTrack - Carbon Footprint Tracker',
+  description: 'AI-powered app that helps individuals and businesses track and reduce their carbon footprint through smart recommendations and real-time monitoring.',
+  category: 'CleanTech',
+  founder_id: 'mock-founder-id',
+  funding_goal: 200000,
+  current_funding: 125000,
+  location: 'San Francisco, CA',
+  website: 'https://ecotrack.app',
+  image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
+  has_audio: true,
+  has_video: true,
+  tags: ['AI', 'Sustainability', 'Mobile App', 'Climate Tech'],
+  team_size: 5,
+  problem: 'Climate change is accelerating, but individuals and businesses lack accessible tools to understand and reduce their environmental impact. Current carbon tracking solutions are complex, expensive, and disconnected from daily activities.',
+  solution: 'EcoTrack uses AI to automatically track carbon footprint through smartphone sensors, purchase data, and lifestyle inputs. It provides personalized recommendations, gamification, and connects users with carbon offset opportunities.',
+  market: 'The global carbon management software market is expected to reach $22.5 billion by 2027. Our target includes 50M+ environmentally conscious consumers and 500K+ SMBs seeking sustainability solutions.',
+  business_model: 'Freemium SaaS model with premium features for detailed analytics, business accounts for companies, and commission from carbon offset marketplace partnerships.',
+  traction: 'Beta version has 2,500 active users with 4.8/5 rating. Partnerships signed with 3 major retailers for purchase data integration. $50K in pre-orders secured.',
+  created_at: '2024-01-15T00:00:00Z',
+  profiles: {
+    full_name: 'Sarah Chen',
+    avatar_url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
+    role: 'founder',
+  },
+};
+
 export default function ProjectDetail() {
   const { colors } = useTheme();
   const { profile } = useAuth();
@@ -74,6 +103,14 @@ export default function ProjectDetail() {
 
   const fetchProject = async () => {
     try {
+      // For demo purposes, use mock data
+      // In production, this would fetch from Supabase
+      setTimeout(() => {
+        setProject(mockProject);
+        setLoading(false);
+      }, 500);
+
+      /* Production code:
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -94,6 +131,7 @@ export default function ProjectDetail() {
       }
 
       setProject(data);
+      */
     } catch (error) {
       console.error('Error:', error);
       Alert.alert('Error', 'Failed to load project details.');
@@ -449,30 +487,30 @@ export default function ProjectDetail() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {project.title}
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-            <Heart
-              size={20}
-              color={isLiked ? colors.error : colors.textSecondary}
-              fill={isLiked ? colors.error : 'none'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Share2 size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <ArrowLeft size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {project.title}
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+              <Heart
+                size={20}
+                color={isLiked ? colors.error : colors.textSecondary}
+                fill={isLiked ? colors.error : 'none'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+              <Share2 size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {project.image_url && (
           <Image source={{ uri: project.image_url }} style={styles.projectImage} />
         )}
