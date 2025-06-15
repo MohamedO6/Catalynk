@@ -141,14 +141,14 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .limit(1);
+      .maybeSingle();
     
     if (error) {
       console.error('Get user profile error:', error);
       return null;
     }
     
-    return data && data.length > 0 ? data[0] : null;
+    return data;
   } catch (error) {
     console.error('Error:', error);
     return null;
