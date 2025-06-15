@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle, Trash2, FileText, Eye } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -27,6 +27,13 @@ const categories = [
 const fundingStages = [
   'Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C+', 'Growth', 'Not Seeking Funding'
 ];
+
+interface UploadedFile {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+}
 
 export default function CreateProject() {
   const { colors } = useTheme();
@@ -58,6 +65,7 @@ export default function CreateProject() {
   const [hasVideo, setHasVideo] = useState(false);
   const [audioFile, setAudioFile] = useState<any>(null);
   const [videoFile, setVideoFile] = useState<any>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
@@ -170,6 +178,58 @@ export default function CreateProject() {
     }
   };
 
+  const uploadFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', 'text/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const file = result.assets[0];
+        const newFile: UploadedFile = {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'application/octet-stream',
+          size: file.size,
+        };
+        
+        setUploadedFiles(prev => [...prev, newFile]);
+        Alert.alert('File Uploaded', `Successfully uploaded: ${file.name}`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select file. Please try again.');
+    }
+  };
+
+  const removeFile = (index: number) => {
+    Alert.alert(
+      'Remove File',
+      'Are you sure you want to remove this file?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => {
+            setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+          }
+        }
+      ]
+    );
+  };
+
+  const previewFile = (file: UploadedFile) => {
+    if (file.type.startsWith('image/')) {
+      Alert.alert('Image Preview', 'Image preview would open here');
+    } else if (file.type === 'application/pdf') {
+      Alert.alert('PDF Preview', `PDF viewer would open for: ${file.name}`);
+    } else {
+      Alert.alert('File Info', `File: ${file.name}\nType: ${file.type}\nSize: ${file.size ? Math.round(file.size / 1024) + ' KB' : 'Unknown'}`);
+    }
+  };
+
   const generateAudio = async () => {
     if (!formData.pitch.trim()) {
       Alert.alert('Missing Pitch', 'Please write your elevator pitch first to generate audio.');
@@ -248,23 +308,6 @@ export default function CreateProject() {
         }
       ]
     );
-  };
-
-  const uploadFile = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf', 'text/*'],
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const file = result.assets[0];
-        Alert.alert('File Selected', `Selected: ${file.name}`);
-        // Handle file upload logic here
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to select file. Please try again.');
-    }
   };
 
   const validateStep = (step: number) => {
@@ -372,6 +415,9 @@ export default function CreateProject() {
   };
 
   const handleSubmit = async () => {
+    // Prevent multiple submissions
+    if (loading) return;
+
     // Final validation before submission
     const allErrors: Record<string, string> = {};
     
@@ -500,6 +546,14 @@ export default function CreateProject() {
         {currentLength}/{maxLength}
       </Text>
     );
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type === 'application/pdf') return '📄';
+    if (type.includes('word') || type.includes('document')) return '📝';
+    if (type.includes('text')) return '📄';
+    return '📎';
   };
 
   const renderStep1 = () => (
@@ -781,11 +835,43 @@ export default function CreateProject() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Upload Files</Text>
+        <Text style={styles.label}>Upload Files (PDFs, Documents, Images)</Text>
         <TouchableOpacity style={styles.fileUploadButton} onPress={uploadFile}>
           <Upload size={20} color={colors.text} />
           <Text style={styles.fileUploadText}>Upload Documents, PDFs, or Images</Text>
         </TouchableOpacity>
+        
+        {uploadedFiles.length > 0 && (
+          <View style={styles.filesContainer}>
+            {uploadedFiles.map((file, index) => (
+              <View key={index} style={styles.fileItem}>
+                <View style={styles.fileInfo}>
+                  <Text style={styles.fileIcon}>{getFileIcon(file.type)}</Text>
+                  <View style={styles.fileDetails}>
+                    <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                    <Text style={styles.fileSize}>
+                      {file.size ? Math.round(file.size / 1024) + ' KB' : 'Unknown size'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.fileActions}>
+                  <TouchableOpacity 
+                    style={styles.fileActionButton}
+                    onPress={() => previewFile(file)}
+                  >
+                    <Eye size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.fileActionButton}
+                    onPress={() => removeFile(index)}
+                  >
+                    <Trash2 size={16} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.inputContainer}>
@@ -1097,6 +1183,47 @@ export default function CreateProject() {
       fontFamily: 'Inter-Medium',
       color: colors.text,
       marginLeft: 8,
+    },
+    filesContainer: {
+      marginTop: 12,
+    },
+    fileItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+    },
+    fileInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    fileIcon: {
+      fontSize: 20,
+      marginRight: 12,
+    },
+    fileDetails: {
+      flex: 1,
+    },
+    fileName: {
+      fontSize: 14,
+      fontFamily: 'Inter-Medium',
+      color: colors.text,
+    },
+    fileSize: {
+      fontSize: 12,
+      fontFamily: 'Inter-Regular',
+      color: colors.textSecondary,
+    },
+    fileActions: {
+      flexDirection: 'row',
+    },
+    fileActionButton: {
+      padding: 8,
+      marginLeft: 4,
     },
     aiContentContainer: {
       gap: 12,
