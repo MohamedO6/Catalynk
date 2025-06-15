@@ -103,9 +103,9 @@ export default function PitchOrDitchGame() {
         .from('game_scores')
         .select('*')
         .eq('user_id', profile.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching user score:', error);
         return;
       }
