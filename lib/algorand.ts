@@ -1,4 +1,4 @@
-import algosdk from 'algorand-algosdk';
+import algosdk from 'algosdk';
 
 const algodToken = '';
 const algodServer = process.env.EXPO_PUBLIC_ALGORAND_NODE_URL || 'https://testnet-api.algonode.cloud';
