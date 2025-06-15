@@ -67,11 +67,12 @@ export const signInWithOAuth = async (provider: 'google' | 'github') => {
     
     if (Platform.OS === 'web') {
       // For web, use the current origin + callback path
-      redirectTo = `${window.location.origin}/callback`;
+      redirectTo = `${window.location.origin}/(auth)/callback`;
     } else {
       // For mobile, use expo-auth-session
       redirectTo = makeRedirectUri({
-        path: '/callback',
+        scheme: 'catalynk',
+        path: '/auth/callback',
       });
     }
 
@@ -82,6 +83,10 @@ export const signInWithOAuth = async (provider: 'google' | 'github') => {
       options: {
         redirectTo,
         skipBrowserRedirect: Platform.OS !== 'web',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
 

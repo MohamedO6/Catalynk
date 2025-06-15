@@ -9,11 +9,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Send, Phone, Video, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -23,16 +25,111 @@ interface Message {
   is_own: boolean;
 }
 
+interface Conversation {
+  id: string;
+  participant_1: string;
+  participant_2: string;
+  last_message_at: string;
+}
+
 export default function MessagingScreen() {
   const { colors } = useTheme();
   const { profile } = useAuth();
-  const { id } = useLocalSearchParams();
+  const { id: recipientId } = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [recipientName, setRecipientName] = useState('User');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    // Simulate loading messages
+    if (profile?.id && recipientId) {
+      initializeConversation();
+    }
+  }, [profile?.id, recipientId]);
+
+  const initializeConversation = async () => {
+    if (!profile?.id || !recipientId) return;
+
+    try {
+      // Get recipient info
+      const { data: recipientData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', recipientId)
+        .single();
+
+      if (recipientData) {
+        setRecipientName(recipientData.full_name);
+      }
+
+      // Find or create conversation
+      let { data: conversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`and(participant_1.eq.${profile.id},participant_2.eq.${recipientId}),and(participant_1.eq.${recipientId},participant_2.eq.${profile.id})`)
+        .single();
+
+      if (!conversation) {
+        // Create new conversation
+        const { data: newConversation, error } = await supabase
+          .from('conversations')
+          .insert({
+            participant_1: profile.id,
+            participant_2: recipientId,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating conversation:', error);
+          Alert.alert('Error', 'Failed to start conversation');
+          return;
+        }
+        conversation = newConversation;
+      }
+
+      setConversationId(conversation.id);
+      await loadMessages(conversation.id);
+    } catch (error) {
+      console.error('Error initializing conversation:', error);
+      // Load mock messages for demo
+      loadMockMessages();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (convId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading messages:', error);
+        return;
+      }
+
+      const formattedMessages = data.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        sender_id: msg.sender_id,
+        timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        is_own: msg.sender_id === profile?.id,
+      }));
+
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      loadMockMessages();
+    }
+  };
+
+  const loadMockMessages = () => {
     const mockMessages: Message[] = [
       {
         id: '1',
@@ -64,34 +161,54 @@ export default function MessagingScreen() {
       },
     ];
     setMessages(mockMessages);
-    setRecipientName('Alex Thompson');
-  }, [id]);
+  };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !profile?.id) return;
 
-    const message: Message = {
+    const tempMessage: Message = {
       id: Date.now().toString(),
       content: newMessage.trim(),
-      sender_id: 'me',
+      sender_id: profile.id,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       is_own: true,
     };
 
-    setMessages(prev => [...prev, message]);
+    setMessages(prev => [...prev, tempMessage]);
+    const messageContent = newMessage.trim();
     setNewMessage('');
 
-    // Simulate response
-    setTimeout(() => {
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        content: 'Thanks for your message! I\'ll get back to you soon.',
-        sender_id: 'other',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        is_own: false,
-      };
-      setMessages(prev => [...prev, response]);
-    }, 1000);
+    try {
+      if (conversationId) {
+        const { error } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: profile.id,
+            content: messageContent,
+          });
+
+        if (error) {
+          console.error('Error sending message:', error);
+          Alert.alert('Error', 'Failed to send message');
+          // Remove the temp message on error
+          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Simulate response for demo
+      setTimeout(() => {
+        const response: Message = {
+          id: (Date.now() + 1).toString(),
+          content: 'Thanks for your message! I\'ll get back to you soon.',
+          sender_id: 'other',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          is_own: false,
+        };
+        setMessages(prev => [...prev, response]);
+      }, 1000);
+    }
   };
 
   const handleCall = () => {
@@ -104,6 +221,14 @@ export default function MessagingScreen() {
 
   const handleMore = () => {
     Alert.alert('More Options', 'Additional options coming soon!');
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    if (conversationId) {
+      loadMessages(conversationId);
+    }
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   const styles = StyleSheet.create({
@@ -226,7 +351,27 @@ export default function MessagingScreen() {
     sendButtonDisabled: {
       opacity: 0.5,
     },
+    loadingText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 100,
+    },
   });
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.loadingText}>Loading conversation...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -259,6 +404,9 @@ export default function MessagingScreen() {
       <ScrollView 
         style={styles.messagesContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {messages.map((message) => (
           <View

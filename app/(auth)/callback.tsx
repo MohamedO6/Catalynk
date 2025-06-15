@@ -12,6 +12,11 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('Auth callback triggered');
+        
+        // Small delay to ensure URL processing is complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Get the current session after OAuth redirect
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -23,6 +28,8 @@ export default function AuthCallback() {
         }
 
         if (session?.user) {
+          console.log('User authenticated successfully:', session.user.email);
+          
           // Check if user has completed profile setup
           const { data: profiles } = await supabase
             .from('profiles')
@@ -34,9 +41,11 @@ export default function AuthCallback() {
 
           if (profile?.role) {
             // User has completed setup, go to main app
+            console.log('User has role, redirecting to main app');
             router.replace('/(tabs)');
           } else {
             // User needs to complete role selection
+            console.log('User needs role selection');
             router.replace('/(auth)/role-selection');
           }
         } else {
@@ -50,9 +59,7 @@ export default function AuthCallback() {
       }
     };
 
-    // Small delay to ensure the URL has been processed
-    const timer = setTimeout(handleAuthCallback, 100);
-    return () => clearTimeout(timer);
+    handleAuthCallback();
   }, []);
 
   const styles = StyleSheet.create({

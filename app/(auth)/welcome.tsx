@@ -42,16 +42,21 @@ export default function Welcome() {
     setLoading(provider);
     
     try {
+      console.log(`Starting ${provider} OAuth flow`);
       const { data, error } = await signInWithOAuth(provider);
       
       if (error) {
-        Alert.alert('Authentication Error', error.message);
+        console.error(`${provider} OAuth error:`, error);
+        Alert.alert('Authentication Error', error.message || `Failed to sign in with ${provider}`);
       } else if (data?.user) {
-        // Check if user has completed profile setup
-        router.replace('/(auth)/role-selection');
+        console.log(`${provider} OAuth successful:`, data.user.email);
+        // The auth context will handle the redirect
+      } else {
+        console.log(`${provider} OAuth cancelled or failed`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to authenticate. Please try again.');
+      console.error(`${provider} OAuth unexpected error:`, error);
+      Alert.alert('Error', `Failed to authenticate with ${provider}. Please try again.`);
     } finally {
       setLoading(null);
     }
