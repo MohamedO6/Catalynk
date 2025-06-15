@@ -348,19 +348,9 @@ export default function Projects() {
       const shareMessage = `🚀 Check out "${project.title}" by ${project.profiles.full_name} on Catalynk!\n\n${project.description}\n\n💰 ${formatCurrency(project.current_funding)} raised of ${formatCurrency(project.funding_goal)} goal\n👥 ${project.team_size} team members\n\n${shareUrl}`;
 
       if (Platform.OS === 'web') {
-        // Web sharing - try native Web Share API first, fallback to clipboard
-        if (navigator.share) {
-          await navigator.share({
-            title: shareTitle,
-            text: project.description,
-            url: shareUrl,
-          });
-          Alert.alert('✅ Shared Successfully!', 'Project has been shared.');
-        } else {
-          // Fallback to clipboard
-          await Clipboard.setStringAsync(shareUrl);
-          Alert.alert('📋 Link Copied!', 'Project link has been copied to clipboard. You can now paste it anywhere to share!');
-        }
+        // For web, always use clipboard as it's more reliable
+        await Clipboard.setStringAsync(shareUrl);
+        Alert.alert('📋 Link Copied!', 'Project link has been copied to clipboard. You can now paste it anywhere to share!');
       } else {
         // Mobile sharing
         const result = await Share.share({
