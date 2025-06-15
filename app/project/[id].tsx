@@ -8,6 +8,9 @@ import {
   Image,
   Dimensions,
   Alert,
+  Linking,
+  Platform,
+  Share,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -27,6 +30,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import * as Clipboard from 'expo-clipboard';
 
 const { width } = Dimensions.get('window');
 
@@ -55,6 +59,7 @@ interface ProjectDetails {
     full_name: string;
     avatar_url?: string;
     role: string;
+    email?: string;
   };
 }
 
@@ -84,6 +89,7 @@ const mockProject: ProjectDetails = {
     full_name: 'Sarah Chen',
     avatar_url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
     role: 'founder',
+    email: 'sarah@ecotrack.app',
   },
 };
 
@@ -109,29 +115,6 @@ export default function ProjectDetail() {
         setProject(mockProject);
         setLoading(false);
       }, 500);
-
-      /* Production code:
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          profiles:founder_id (
-            full_name,
-            avatar_url,
-            role
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching project:', error);
-        Alert.alert('Error', 'Failed to load project details.');
-        return;
-      }
-
-      setProject(data);
-      */
     } catch (error) {
       console.error('Error:', error);
       Alert.alert('Error', 'Failed to load project details.');
@@ -149,8 +132,32 @@ export default function ProjectDetail() {
     Alert.alert('Liked', isLiked ? 'Removed from favorites' : 'Added to favorites!');
   };
 
-  const handleShare = () => {
-    Alert.alert('Share Project', 'Project link copied to clipboard!');
+  const handleShare = async () => {
+    if (!project) return;
+
+    try {
+      const shareUrl = `https://catalynk.app/project/${project.id}`;
+      const shareTitle = `${project.title} by ${project.profiles.full_name}`;
+      const shareMessage = `🚀 Check out "${project.title}" by ${project.profiles.full_name} on Catalynk!\n\n${project.description}\n\n💰 ${formatCurrency(project.current_funding)} raised of ${formatCurrency(project.funding_goal)} goal\n👥 ${project.team_size} team members\n\n${shareUrl}`;
+
+      if (Platform.OS === 'web') {
+        await Clipboard.setStringAsync(shareUrl);
+        Alert.alert('📋 Link Copied!', 'Project link has been copied to clipboard. You can now paste it anywhere to share!');
+      } else {
+        const result = await Share.share({
+          message: shareMessage,
+          url: shareUrl,
+          title: shareTitle,
+        });
+
+        if (result.action === Share.sharedAction) {
+          Alert.alert('✅ Shared Successfully!', 'Project has been shared.');
+        }
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Alert.alert('❌ Share Failed', 'Unable to share the project. Please try again.');
+    }
   };
 
   const handlePlayAudio = () => {
@@ -170,16 +177,84 @@ export default function ProjectDetail() {
   };
 
   const handleContact = () => {
-    Alert.alert('Contact Founder', 'Messaging feature coming soon!');
+    if (!project) return;
+    
+    Alert.alert(
+      '📞 Contact Founder',
+      `How would you like to contact ${project.profiles.full_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: '💬 Send Message', 
+          onPress: () => handleSendMessage()
+        },
+        { 
+          text: '📧 Send Email', 
+          onPress: () => handleSendEmail()
+        }
+      ]
+    );
+  };
+
+  const handleSendMessage = () => {
+    if (!project) return;
+    router.push(`/messaging/${project.founder_id}`);
+  };
+
+  const handleSendEmail = async () => {
+    if (!project) return;
+
+    try {
+      const subject = encodeURIComponent(`Interested in ${project.title}`);
+      const body = encodeURIComponent(
+        `Hi ${project.profiles.full_name},\n\nI'm interested in your project "${project.title}" and would like to learn more about it.\n\nProject: ${project.title}\nCategory: ${project.category}\nFunding: ${formatCurrency(project.current_funding)} of ${formatCurrency(project.funding_goal)}\n\nI'd love to discuss potential collaboration opportunities.\n\nBest regards,\n${profile?.full_name || 'A Catalynk User'}`
+      );
+      
+      const emailUrl = `mailto:${project.profiles.email || ''}?subject=${subject}&body=${body}`;
+      
+      const supported = await Linking.canOpenURL(emailUrl);
+      
+      if (supported) {
+        await Linking.openURL(emailUrl);
+      } else {
+        // Fallback - copy email to clipboard
+        if (project.profiles.email) {
+          await Clipboard.setStringAsync(project.profiles.email);
+          Alert.alert('📧 Email Copied', `${project.profiles.full_name}'s email has been copied to clipboard: ${project.profiles.email}`);
+        } else {
+          Alert.alert('❌ No Email Available', 'No email address is available for this founder.');
+        }
+      }
+    } catch (error) {
+      console.error('Email error:', error);
+      Alert.alert('❌ Error', 'Failed to open email client. Please try again.');
+    }
   };
 
   const handleJoinTeam = () => {
     Alert.alert('Join Team', 'Team joining feature coming soon!');
   };
 
-  const handleWebsite = () => {
-    if (project?.website) {
-      Alert.alert('Opening Website', `Opening ${project.website}...`);
+  const handleWebsite = async () => {
+    if (!project?.website) return;
+
+    try {
+      // Ensure the URL has a protocol
+      let url = project.website;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
+
+      const supported = await Linking.canOpenURL(url);
+      
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('❌ Cannot Open Website', 'Unable to open the website. Please check the URL and try again.');
+      }
+    } catch (error) {
+      console.error('Website opening error:', error);
+      Alert.alert('❌ Error', 'Failed to open website. Please try again.');
     }
   };
 
@@ -340,6 +415,20 @@ export default function ProjectDetail() {
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
       marginLeft: 8,
+    },
+    websiteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    websiteText: {
+      fontSize: 12,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.primary,
+      marginLeft: 4,
     },
     fundingSection: {
       backgroundColor: colors.card,
@@ -566,9 +655,9 @@ export default function ProjectDetail() {
               <Text style={styles.metaText}>{project.team_size} team members</Text>
             </View>
             {project.website && (
-              <TouchableOpacity style={styles.metaItem} onPress={handleWebsite}>
-                <ExternalLink size={16} color={colors.primary} />
-                <Text style={[styles.metaText, { color: colors.primary }]}>Visit Website</Text>
+              <TouchableOpacity style={styles.websiteButton} onPress={handleWebsite}>
+                <ExternalLink size={12} color={colors.primary} />
+                <Text style={styles.websiteText}>Visit Website</Text>
               </TouchableOpacity>
             )}
           </View>

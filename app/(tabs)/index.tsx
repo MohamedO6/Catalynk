@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -94,6 +95,7 @@ export default function Home() {
   const { colors } = useTheme();
   const { profile } = useAuth();
   const [likedProjects, setLikedProjects] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const headerOpacity = useSharedValue(0);
   const statsOpacity = useSharedValue(0);
@@ -134,14 +136,15 @@ export default function Home() {
   };
 
   const handleNotifications = () => {
-    Alert.alert(
-      'Notifications',
-      'You have 3 new notifications:\n\n• Sarah Chen liked your project\n• New investor joined EcoTrack\n• Weekly funding report available',
-      [
-        { text: 'Mark as Read', style: 'default' },
-        { text: 'View All', onPress: () => router.push('/notifications') }
-      ]
-    );
+    router.push('/notifications');
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    // Simulate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
   };
 
   const formatNumber = (num: number) => {
@@ -496,6 +499,9 @@ export default function Home() {
         style={styles.container}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <LinearGradient
           colors={[colors.primary + '08', colors.background]}

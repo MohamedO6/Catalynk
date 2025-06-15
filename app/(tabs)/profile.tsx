@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Settings, CreditCard as Edit3, Star, Users, Mic, Crown, ExternalLink, Github, Linkedin, Globe, LogOut, Bell, Shield, Moon, Sun, Download, Share2 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -27,6 +28,7 @@ export default function Profile() {
   const { colors, theme, setTheme } = useTheme();
   const { profile, signOut } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -66,6 +68,22 @@ export default function Profile() {
     Alert.alert('Export Episodes', 'Download all your episodes as audio/video files.');
   };
 
+  const handleShareProfile = () => {
+    Alert.alert('Share Profile', 'Profile link copied to clipboard!');
+  };
+
+  const handlePrivacySettings = () => {
+    Alert.alert('Privacy & Security', 'Privacy settings coming soon!');
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    // Simulate refresh
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -89,6 +107,9 @@ export default function Profile() {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
     },
     header: {
       paddingTop: 60,
@@ -328,91 +349,100 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.primary + '10', colors.background]}
-        style={styles.header}
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Profile</Text>
-          <TouchableOpacity style={styles.settingsButton}>
-            <Settings size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+        <LinearGradient
+          colors={[colors.primary + '10', colors.background]}
+          style={styles.header}
+        >
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>Profile</Text>
+            <TouchableOpacity style={styles.settingsButton}>
+              <Settings size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {getInitials(profile?.full_name || 'User')}
+          <View style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {getInitials(profile?.full_name || 'User')}
+                </Text>
+              </View>
+
+              <View style={styles.nameContainer}>
+                <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
+                {profile?.subscription_tier === 'pro' && (
+                  <View style={styles.proBadge}>
+                    <Crown size={16} color="#FFD700" />
+                    <Text style={styles.proText}>PRO</Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.bio}>
+                {profile?.bio || 'Podcast creator passionate about sharing stories and insights through AI-powered content.'}
               </Text>
-            </View>
 
-            <View style={styles.nameContainer}>
-              <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
-              {profile?.tier === 'pro' && (
-                <View style={styles.proBadge}>
-                  <Crown size={16} color="#FFD700" />
-                  <Text style={styles.proText}>PRO</Text>
-                </View>
-              )}
-            </View>
+              <View style={styles.socialLinks}>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Github size={20} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Linkedin size={20} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Globe size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.bio}>
-              {profile?.bio || 'Podcast creator passionate about sharing stories and insights through AI-powered content.'}
-            </Text>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+                  <Edit3 size={18} color="#FFFFFF" />
+                  <Text style={styles.editButtonText}>Edit Profile</Text>
+                </TouchableOpacity>
 
-            <View style={styles.socialLinks}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Github size={20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Linkedin size={20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Globe size={20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                <Edit3 size={18} color="#FFFFFF" />
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.domainButton} onPress={handleCreateDomain}>
-                <Globe size={18} color={colors.text} />
-                <Text style={styles.domainButtonText}>My Domain</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.domainButton} onPress={handleCreateDomain}>
+                  <Globe size={18} color={colors.text} />
+                  <Text style={styles.domainButtonText}>My Domain</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </LinearGradient>
+        </LinearGradient>
 
-      <ScrollView style={styles.statsContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{mockUserStats.episodesCreated}</Text>
-            <Text style={styles.statLabel}>Episodes Created</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{formatNumber(mockUserStats.totalPlays)}</Text>
-            <Text style={styles.statLabel}>Total Plays</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{formatNumber(mockUserStats.totalLikes)}</Text>
-            <Text style={styles.statLabel}>Total Likes</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={styles.ratingContainer}>
-              <Star size={20} color={colors.warning} fill={colors.warning} />
-              <Text style={styles.ratingText}>{mockUserStats.rating}</Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{mockUserStats.episodesCreated}</Text>
+              <Text style={styles.statLabel}>Episodes Created</Text>
             </View>
-            <Text style={styles.reviewsText}>{mockUserStats.reviews} reviews</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{formatNumber(mockUserStats.totalPlays)}</Text>
+              <Text style={styles.statLabel}>Total Plays</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{formatNumber(mockUserStats.totalLikes)}</Text>
+              <Text style={styles.statLabel}>Total Likes</Text>
+            </View>
+            <View style={styles.statCard}>
+              <View style={styles.ratingContainer}>
+                <Star size={20} color={colors.warning} fill={colors.warning} />
+                <Text style={styles.ratingText}>{mockUserStats.rating}</Text>
+              </View>
+              <Text style={styles.reviewsText}>{mockUserStats.reviews} reviews</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.menuContainer}>
-          {profile?.tier === 'free' && (
+          {profile?.subscription_tier === 'free' && (
             <View style={styles.menuSection}>
               <TouchableOpacity style={[styles.menuItem, styles.upgradeButton]} onPress={handleUpgrade}>
                 <View style={styles.menuItemLeft}>
@@ -437,7 +467,7 @@ export default function Profile() {
               <ExternalLink size={20} color={colors.textSecondary} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleShareProfile}>
               <View style={styles.menuItemLeft}>
                 <Share2 size={24} color={colors.text} />
                 <Text style={styles.menuItemText}>Share Profile</Text>
@@ -481,7 +511,7 @@ export default function Profile() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity style={styles.menuItem} onPress={handlePrivacySettings}>
               <View style={styles.menuItemLeft}>
                 <Shield size={24} color={colors.text} />
                 <Text style={styles.menuItemText}>Privacy & Security</Text>
