@@ -9,8 +9,15 @@ export default function Index() {
   const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
+    // Add a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.log('Timeout reached, forcing navigation to onboarding');
+      router.replace('/onboarding');
+    }, 5000); // 5 second timeout
+
     // Wait for both auth loading to complete AND root navigation to be ready
     if (!loading && rootNavigationState?.key) {
+      clearTimeout(timeout);
       console.log('Navigation ready, user:', !!user, 'profile:', !!profile, 'role:', profile?.role);
       
       if (user) {
@@ -29,18 +36,11 @@ export default function Index() {
         router.replace('/onboarding');
       }
     }
+
+    return () => clearTimeout(timeout);
   }, [user, profile, loading, rootNavigationState?.key]);
 
   // Show loading screen while auth is loading or navigation isn't ready
-  if (loading || !rootNavigationState?.key) {
-    return (
-      <View style={{ flex: 1 }}>
-        <LoadingScreen />
-      </View>
-    );
-  }
-
-  // Fallback loading screen
   return (
     <View style={{ flex: 1 }}>
       <LoadingScreen />

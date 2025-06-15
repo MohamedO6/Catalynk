@@ -72,6 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getInitialSession = async () => {
       try {
         console.log('Getting initial session...');
+        
+        // Add a small delay to ensure Supabase is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -99,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
+          // Always set loading to false after processing
           setLoading(false);
         }
       } catch (error) {
@@ -136,11 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (mounted.current) {
               setProfile(null);
             }
-          }
-          
-          // Only set loading to false after handling the auth change
-          if (event !== 'INITIAL_SESSION') {
-            setLoading(false);
           }
         }
       }
