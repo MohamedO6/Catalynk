@@ -159,7 +159,14 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({ id: userId, ...updates }, { onConflict: 'id' })
+      .upsert({ 
+        id: userId, 
+        ...updates,
+        updated_at: new Date().toISOString()
+      }, { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
+      })
       .select()
       .single();
 

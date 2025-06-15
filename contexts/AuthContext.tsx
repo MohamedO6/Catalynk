@@ -71,7 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+        }
+
+        console.log('Initial session:', !!session?.user);
         
         if (mounted.current) {
           setUser(session?.user ?? null);
@@ -80,11 +87,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               const userProfile = await getUserProfile(session.user.id);
               if (mounted.current) {
+                console.log('Initial profile loaded:', !!userProfile, userProfile?.role);
                 setProfile(userProfile);
               }
             } catch (profileError) {
               console.error('Error fetching profile:', profileError);
-              // Profile might not exist yet, that's okay
+              // Profile might not exist yet, that's okay for new users
+              if (mounted.current) {
+                setProfile(null);
+              }
             }
           }
           
@@ -102,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('Auth state changed:', event, !!session?.user);
         
         if (mounted.current) {
           setUser(session?.user ?? null);
@@ -111,6 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               const userProfile = await getUserProfile(session.user.id);
               if (mounted.current) {
+                console.log('Profile loaded on auth change:', !!userProfile, userProfile?.role);
                 setProfile(userProfile);
               }
             } catch (error) {
@@ -126,7 +138,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
-          setLoading(false);
+          // Only set loading to false after handling the auth change
+          if (event !== 'INITIAL_SESSION') {
+            setLoading(false);
+          }
         }
       }
     );

@@ -18,6 +18,7 @@ import Animated, {
 import { Lightbulb, Users, DollarSign, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export type UserRole = 'founder' | 'freelancer' | 'investor';
 
@@ -50,7 +51,7 @@ const roles = [
 
 export default function RoleSelection() {
   const { colors } = useTheme();
-  const { user, updateProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -63,23 +64,50 @@ export default function RoleSelection() {
   }, []);
 
   const handleContinue = async () => {
-    if (!selectedRole || !user) return;
+    if (!selectedRole || !user) {
+      Alert.alert('Error', 'Please select a role to continue.');
+      return;
+    }
 
     setLoading(true);
     
     try {
-      // Update the user's profile with the selected role
-      await updateProfile({
-        role: selectedRole,
-        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      console.log('Updating profile with role:', selectedRole);
+      
+      // Create or update the user's profile with the selected role
+      const profileData = {
+        id: user.id,
         email: user.email || '',
-      });
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        role: selectedRole,
+        subscription_tier: 'free' as const,
+      };
 
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profileData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        Alert.alert('Error', `Failed to save your role: ${error.message}`);
+        return;
+      }
+
+      console.log('Profile updated successfully:', data);
+      
+      // Refresh the profile in context
+      await refreshProfile();
+      
       // Navigate to main app
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to save your role. Please try again.');
+      console.error('Unexpected error updating profile:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
