@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Heart, MoveHorizontal as MoreHorizontal, Filter, Plus, Code, Lightbulb, HelpCircle } from 'lucide-react-native';
+import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Heart, MoveHorizontal as MoreHorizontal, Filter, Plus, Code, Lightbulb, CircleHelp as HelpCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
