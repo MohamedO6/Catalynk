@@ -147,13 +147,15 @@ export default function PitchOrDitchGame() {
     setShowResult(true);
 
     try {
-      // Record the vote
+      // Record the vote with proper conflict resolution
       await supabase
         .from('game_votes')
         .upsert({
           user_id: profile.id,
           idea_id: currentIdea.id,
           vote_type: vote,
+        }, {
+          onConflict: 'user_id,idea_id'
         });
 
       // Calculate points based on vote and community consensus
