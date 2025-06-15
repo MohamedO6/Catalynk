@@ -38,7 +38,7 @@ interface CommunityPost {
 
 const mockPosts: CommunityPost[] = [
   {
-    id: '1',
+    id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     type: 'question',
     title: 'How to validate a startup idea before building?',
     content: 'I have an idea for a fintech app but I\'m not sure how to validate it properly. What are the best methods to test market demand before investing time and money?',
@@ -52,7 +52,7 @@ const mockPosts: CommunityPost[] = [
     tags: ['validation', 'fintech', 'market-research'],
   },
   {
-    id: '2',
+    id: 'b1ffcd88-8d1c-5fg9-cc7e-7cc0ce491b22',
     type: 'discussion',
     title: 'Best tech stack for MVP development in 2024?',
     content: 'Looking for recommendations on modern tech stacks that allow for rapid MVP development. Considering React Native + Supabase vs Next.js + Firebase. What are your experiences?',
@@ -66,7 +66,7 @@ const mockPosts: CommunityPost[] = [
     tags: ['mvp', 'tech-stack', 'react-native'],
   },
   {
-    id: '3',
+    id: 'c2ggde77-7e2d-6hh0-dd8f-8dd1df502c33',
     type: 'showcase',
     title: 'Built an AI-powered project management tool',
     content: 'After 6 months of development, I\'m excited to share my AI project management tool that helps teams prioritize tasks automatically. Would love feedback from the community!',
@@ -80,7 +80,7 @@ const mockPosts: CommunityPost[] = [
     tags: ['ai', 'project-management', 'saas'],
   },
   {
-    id: '4',
+    id: 'd3hhef66-6f3e-7ii1-ee9g-9ee2eg613d44',
     type: 'help',
     title: 'Need help with user authentication implementation',
     content: 'Struggling with implementing secure user authentication in my React app. Should I use Auth0, Firebase Auth, or build custom? Looking for pros/cons of each approach.',
