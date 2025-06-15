@@ -40,11 +40,13 @@ export default function OAuthCallback() {
           
           if (user) {
             // Check if user has a profile with role
-            const { data: profile } = await supabase
+            const { data: profiles } = await supabase
               .from('profiles')
               .select('role')
               .eq('id', user.id)
-              .maybeSingle();
+              .limit(1);
+
+            const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
             if (profile?.role) {
               // User has completed setup, go to main app
