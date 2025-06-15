@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { UserProfile, getCurrentUser, getUserProfile } from '@/lib/auth';
+import { UserProfile, getCurrentUser, getUserProfile, updateUserProfile } from '@/lib/auth';
 import { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +38,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error refreshing profile:', error);
       }
+    }
+  };
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await updateUserProfile(user.id, updates);
+      if (!error && data && mounted.current) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
     }
   };
 
@@ -70,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             } catch (profileError) {
               console.error('Error fetching profile:', profileError);
+              // Profile might not exist yet, that's okay
             }
           }
           
@@ -87,6 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
         if (mounted.current) {
           setUser(session?.user ?? null);
           
@@ -98,6 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             } catch (error) {
               console.error('Error fetching profile on auth change:', error);
+              // Profile might not exist yet for new users
+              if (mounted.current) {
+                setProfile(null);
+              }
             }
           } else {
             if (mounted.current) {
@@ -117,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

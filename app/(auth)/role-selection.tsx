@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { 
@@ -15,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Lightbulb, Users, DollarSign, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type UserRole = 'founder' | 'freelancer' | 'investor';
 
@@ -47,7 +50,9 @@ const roles = [
 
 export default function RoleSelection() {
   const { colors } = useTheme();
+  const { user, updateProfile } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const titleOpacity = useSharedValue(0);
   const cardsOpacity = useSharedValue(0);
@@ -57,9 +62,26 @@ export default function RoleSelection() {
     cardsOpacity.value = withDelay(300, withSpring(1));
   }, []);
 
-  const handleContinue = () => {
-    if (selectedRole) {
+  const handleContinue = async () => {
+    if (!selectedRole || !user) return;
+
+    setLoading(true);
+    
+    try {
+      // Update the user's profile with the selected role
+      await updateProfile({
+        role: selectedRole,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        email: user.email || '',
+      });
+
+      // Navigate to main app
       router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to save your role. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -276,13 +298,19 @@ export default function RoleSelection() {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              !selectedRole && styles.continueButtonDisabled,
+              (!selectedRole || loading) && styles.continueButtonDisabled,
             ]}
             onPress={handleContinue}
-            disabled={!selectedRole}
+            disabled={!selectedRole || loading}
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
-            <ArrowRight size={20} color="#FFFFFF" />
+            <Text style={styles.continueButtonText}>
+              {loading ? 'Setting up...' : 'Continue'}
+            </Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <ArrowRight size={20} color="#FFFFFF" />
+            )}
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

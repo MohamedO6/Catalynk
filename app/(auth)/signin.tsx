@@ -41,7 +41,8 @@ export default function SignIn() {
       if (error) {
         Alert.alert('Error', error.message);
       } else if (data?.user) {
-        router.replace('/(tabs)');
+        // Check if user has completed role selection
+        router.replace('/(auth)/role-selection');
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
