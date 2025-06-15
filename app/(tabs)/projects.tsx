@@ -9,8 +9,17 @@ import {
   Dimensions,
   Image,
   Alert,
+  Modal,
+  Share,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withDelay
+} from 'react-native-reanimated';
 import {
   Search,
   Filter,
@@ -23,6 +32,13 @@ import {
   Users,
   Play,
   Volume2,
+  MessageCircle,
+  Mail,
+  X,
+  DollarSign,
+  TrendingUp,
+  Calendar,
+  Tag,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,7 +67,16 @@ interface Project {
   };
 }
 
-const categories = ['All', 'Fintech', 'HealthTech', 'AgTech', 'EdTech', 'CleanTech', 'AI/ML'];
+const categories = ['All', 'FinTech', 'HealthTech', 'EdTech', 'CleanTech', 'AI/ML', 'Blockchain', 'E-commerce', 'SaaS'];
+
+const sortOptions = [
+  { id: 'newest', label: 'Newest First', icon: Calendar },
+  { id: 'oldest', label: 'Oldest First', icon: Calendar },
+  { id: 'funding_high', label: 'Highest Funding', icon: DollarSign },
+  { id: 'funding_low', label: 'Lowest Funding', icon: DollarSign },
+  { id: 'popular', label: 'Most Popular', icon: TrendingUp },
+  { id: 'team_size', label: 'Team Size', icon: Users },
+];
 
 // Mock projects for demo
 const mockProjects: Project[] = [
@@ -115,20 +140,75 @@ const mockProjects: Project[] = [
       avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
     },
   },
+  {
+    id: '4',
+    title: 'FoodieBot - Restaurant Discovery AI',
+    description: 'Smart restaurant recommendation system that learns your taste preferences and suggests perfect dining experiences.',
+    category: 'AI/ML',
+    founder_id: 'founder4',
+    funding_goal: 75000,
+    current_funding: 45000,
+    location: 'Los Angeles, CA',
+    image_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_audio: false,
+    has_video: false,
+    tags: ['AI', 'Food', 'Recommendations'],
+    team_size: 2,
+    created_at: '2024-01-12T00:00:00Z',
+    profiles: {
+      full_name: 'Alex Kim',
+      avatar_url: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    },
+  },
+  {
+    id: '5',
+    title: 'CryptoWallet Pro - Secure Digital Assets',
+    description: 'Next-generation cryptocurrency wallet with advanced security features and multi-chain support.',
+    category: 'Blockchain',
+    founder_id: 'founder5',
+    funding_goal: 500000,
+    current_funding: 320000,
+    location: 'Miami, FL',
+    image_url: 'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_audio: true,
+    has_video: true,
+    tags: ['Blockchain', 'Security', 'Crypto'],
+    team_size: 12,
+    created_at: '2024-01-11T00:00:00Z',
+    profiles: {
+      full_name: 'David Park',
+      avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    },
+  },
 ];
 
 export default function Projects() {
   const { colors } = useTheme();
   const { profile } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [likedProjects, setLikedProjects] = useState<string[]>([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedSort, setSelectedSort] = useState('newest');
+  const [minFunding, setMinFunding] = useState('');
+  const [maxFunding, setMaxFunding] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const headerOpacity = useSharedValue(0);
+  const projectsOpacity = useSharedValue(0);
 
   useEffect(() => {
+    headerOpacity.value = withSpring(1);
+    projectsOpacity.value = withDelay(200, withSpring(1));
     fetchProjects();
-  }, [selectedCategory]);
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [projects, searchQuery, selectedCategory, selectedSort, minFunding, maxFunding, selectedTags]);
 
   const fetchProjects = async () => {
     try {
@@ -137,38 +217,71 @@ export default function Projects() {
         setProjects(mockProjects);
         setLoading(false);
       }, 500);
-
-      /* Production code:
-      let query = supabase
-        .from('projects')
-        .select(`
-          *,
-          profiles:founder_id (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-
-      if (selectedCategory !== 'All') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching projects:', error);
-        return;
-      }
-
-      setProjects(data || []);
-      */
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...projects];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(project =>
+        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(project => project.category === selectedCategory);
+    }
+
+    // Funding range filter
+    if (minFunding) {
+      const min = parseFloat(minFunding);
+      filtered = filtered.filter(project => project.current_funding >= min);
+    }
+    if (maxFunding) {
+      const max = parseFloat(maxFunding);
+      filtered = filtered.filter(project => project.current_funding <= max);
+    }
+
+    // Tags filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(project =>
+        selectedTags.some(tag => project.tags.includes(tag))
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (selectedSort) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'funding_high':
+          return b.current_funding - a.current_funding;
+        case 'funding_low':
+          return a.current_funding - b.current_funding;
+        case 'team_size':
+          return b.team_size - a.team_size;
+        case 'popular':
+          // Mock popularity based on funding percentage
+          const aPopularity = a.funding_goal > 0 ? (a.current_funding / a.funding_goal) : 0;
+          const bPopularity = b.funding_goal > 0 ? (b.current_funding / b.funding_goal) : 0;
+          return bPopularity - aPopularity;
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredProjects(filtered);
   };
 
   const toggleLike = (projectId: string) => {
@@ -177,7 +290,12 @@ export default function Projects() {
         ? prev.filter(id => id !== projectId)
         : [...prev, projectId]
     );
-    Alert.alert('Liked', 'Project added to your favorites!');
+    
+    const isLiked = likedProjects.includes(projectId);
+    Alert.alert(
+      isLiked ? 'Removed from Favorites' : 'Added to Favorites',
+      isLiked ? 'Project removed from your favorites' : 'Project added to your favorites!'
+    );
   };
 
   const handleCreateProject = () => {
@@ -192,29 +310,92 @@ export default function Projects() {
     router.push(`/project/${projectId}`);
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      // Filter projects by search query
-      const filtered = projects.filter(project =>
-        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setProjects(filtered);
-    } else {
-      fetchProjects();
-    }
-  };
-
   const handlePlayAudio = (projectId: string) => {
-    Alert.alert('Audio Playing', 'Playing AI-generated pitch audio...');
+    Alert.alert('🎵 Playing Audio', 'AI-generated pitch audio is now playing...');
   };
 
   const handlePlayVideo = (projectId: string) => {
-    Alert.alert('Video Playing', 'Opening AI-generated video introduction...');
+    Alert.alert('🎥 Playing Video', 'AI-generated video introduction is now playing...');
   };
 
-  const handleShare = (projectId: string) => {
-    Alert.alert('Share Project', 'Project link copied to clipboard!');
+  const generateShareLink = (project: Project) => {
+    // Generate unique shareable link
+    const baseUrl = 'https://catalynk.app';
+    return `${baseUrl}/project/${project.id}?ref=${profile?.id || 'guest'}`;
+  };
+
+  const handleShare = async (project: Project) => {
+    try {
+      const shareUrl = generateShareLink(project);
+      const shareMessage = `Check out "${project.title}" by ${project.profiles.full_name} on Catalynk!\n\n${project.description}\n\n${shareUrl}`;
+
+      const result = await Share.share({
+        message: shareMessage,
+        url: shareUrl,
+        title: project.title,
+      });
+
+      if (result.action === Share.sharedAction) {
+        Alert.alert('Shared Successfully!', 'Project link has been shared.');
+      }
+    } catch (error) {
+      // Fallback for web or if Share API fails
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        const shareUrl = generateShareLink(project);
+        await navigator.clipboard.writeText(shareUrl);
+        Alert.alert('Link Copied!', 'Project link has been copied to clipboard.');
+      } else {
+        Alert.alert('Share Project', 'Project link: ' + generateShareLink(project));
+      }
+    }
+  };
+
+  const handleContactFounder = (project: Project) => {
+    Alert.alert(
+      'Contact Founder',
+      `Would you like to contact ${project.profiles.full_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Send Message', 
+          onPress: () => router.push(`/messaging/${project.founder_id}`)
+        },
+        { 
+          text: 'Send Email', 
+          onPress: () => {
+            const subject = `Interested in ${project.title}`;
+            const body = `Hi ${project.profiles.full_name},\n\nI'm interested in your project "${project.title}" and would like to learn more.\n\nBest regards,\n${profile?.full_name || 'A Catalynk User'}`;
+            Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+          }
+        }
+      ]
+    );
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+    setSelectedSort('newest');
+    setMinFunding('');
+    setMaxFunding('');
+    setSelectedTags([]);
+    setShowFilterModal(false);
+  };
+
+  const getAllTags = () => {
+    const allTags = new Set<string>();
+    projects.forEach(project => {
+      project.tags.forEach(tag => allTags.add(tag));
+    });
+    return Array.from(allTags).sort();
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
   };
 
   const getScreenTitle = () => {
@@ -251,6 +432,121 @@ export default function Projects() {
     return date.toLocaleDateString();
   };
 
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: (1 - headerOpacity.value) * 20 }],
+  }));
+
+  const projectsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: projectsOpacity.value,
+    transform: [{ translateY: (1 - projectsOpacity.value) * 30 }],
+  }));
+
+  const renderFilterModal = () => (
+    <Modal
+      visible={showFilterModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.filterModal}>
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterTitle}>Filter & Sort</Text>
+            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
+            {/* Sort Options */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Sort By</Text>
+              {sortOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.filterOption,
+                      selectedSort === option.id && styles.filterOptionActive
+                    ]}
+                    onPress={() => setSelectedSort(option.id)}
+                  >
+                    <Icon size={20} color={selectedSort === option.id ? colors.primary : colors.textSecondary} />
+                    <Text style={[
+                      styles.filterOptionText,
+                      selectedSort === option.id && styles.filterOptionTextActive
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Funding Range */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Funding Range</Text>
+              <View style={styles.fundingInputs}>
+                <TextInput
+                  style={styles.fundingInput}
+                  placeholder="Min ($)"
+                  placeholderTextColor={colors.textTertiary}
+                  value={minFunding}
+                  onChangeText={setMinFunding}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.fundingDash}>-</Text>
+                <TextInput
+                  style={styles.fundingInput}
+                  placeholder="Max ($)"
+                  placeholderTextColor={colors.textTertiary}
+                  value={maxFunding}
+                  onChangeText={setMaxFunding}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Tags */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Tags</Text>
+              <View style={styles.tagsContainer}>
+                {getAllTags().map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[
+                      styles.tagButton,
+                      selectedTags.includes(tag) && styles.tagButtonActive
+                    ]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text style={[
+                      styles.tagButtonText,
+                      selectedTags.includes(tag) && styles.tagButtonTextActive
+                    ]}>
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.filterActions}>
+            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+              <Text style={styles.clearButtonText}>Clear All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.applyButton} onPress={() => setShowFilterModal(false)}>
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -283,6 +579,14 @@ export default function Projects() {
       borderRadius: 22,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
     },
     searchContainer: {
       flexDirection: 'row',
@@ -340,6 +644,17 @@ export default function Projects() {
       flex: 1,
       paddingHorizontal: 20,
     },
+    resultsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    resultsCount: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+    },
     projectCard: {
       backgroundColor: colors.card,
       borderRadius: 16,
@@ -347,10 +662,40 @@ export default function Projects() {
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 5,
     },
     projectImage: {
       width: '100%',
       height: 160,
+      position: 'relative',
+    },
+    mediaOverlay: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      flexDirection: 'row',
+    },
+    mediaBadge: {
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginLeft: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    mediaBadgeText: {
+      fontSize: 10,
+      fontFamily: 'Inter-Bold',
+      color: '#FFFFFF',
+      marginLeft: 4,
     },
     projectContent: {
       padding: 20,
@@ -467,6 +812,9 @@ export default function Projects() {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
     teamInfo: {
       flexDirection: 'row',
@@ -478,15 +826,19 @@ export default function Projects() {
       color: colors.textSecondary,
       marginLeft: 6,
     },
-    rating: {
+    contactButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
       flexDirection: 'row',
       alignItems: 'center',
     },
-    ratingText: {
+    contactButtonText: {
       fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      marginLeft: 4,
+      fontFamily: 'Inter-SemiBold',
+      color: '#FFFFFF',
+      marginLeft: 6,
     },
     loadingText: {
       fontSize: 16,
@@ -502,6 +854,139 @@ export default function Projects() {
       textAlign: 'center',
       marginTop: 40,
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    filterModal: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: '80%',
+    },
+    filterHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    filterTitle: {
+      fontSize: 20,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+    },
+    filterContent: {
+      flex: 1,
+      padding: 20,
+    },
+    filterSection: {
+      marginBottom: 24,
+    },
+    filterSectionTitle: {
+      fontSize: 16,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    filterOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    filterOptionActive: {
+      backgroundColor: colors.primary + '20',
+    },
+    filterOptionText: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      marginLeft: 12,
+    },
+    filterOptionTextActive: {
+      color: colors.primary,
+    },
+    fundingInputs: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    fundingInput: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      fontFamily: 'Inter-Regular',
+      color: colors.text,
+    },
+    fundingDash: {
+      fontSize: 16,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+      marginHorizontal: 12,
+    },
+    tagButton: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    tagButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    tagButtonText: {
+      fontSize: 14,
+      fontFamily: 'Inter-Medium',
+      color: colors.text,
+    },
+    tagButtonTextActive: {
+      color: '#FFFFFF',
+    },
+    filterActions: {
+      flexDirection: 'row',
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    clearButton: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginRight: 8,
+    },
+    clearButtonText: {
+      fontSize: 16,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.text,
+    },
+    applyButton: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    applyButtonText: {
+      fontSize: 16,
+      fontFamily: 'Inter-SemiBold',
+      color: '#FFFFFF',
+    },
   });
 
   return (
@@ -511,7 +996,7 @@ export default function Projects() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, headerAnimatedStyle]}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>{getScreenTitle()}</Text>
             {profile?.role === 'founder' && (
@@ -530,17 +1015,16 @@ export default function Projects() {
                 placeholderTextColor={colors.textTertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
               />
-              <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <Search size={16} color={colors.primary} />
-              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.filterButton}>
+            <TouchableOpacity 
+              style={styles.filterButton} 
+              onPress={() => setShowFilterModal(true)}
+            >
               <Filter size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.categoriesContainer}>
           <ScrollView
@@ -570,13 +1054,24 @@ export default function Projects() {
           </ScrollView>
         </View>
 
-        <View style={styles.projectsContainer}>
+        <Animated.View style={[styles.projectsContainer, projectsAnimatedStyle]}>
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsCount}>
+              {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} found
+            </Text>
+          </View>
+
           {loading ? (
             <Text style={styles.loadingText}>Loading projects...</Text>
-          ) : projects.length === 0 ? (
-            <Text style={styles.emptyText}>No projects found. Be the first to create one!</Text>
+          ) : filteredProjects.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {projects.length === 0 
+                ? 'No projects found. Be the first to create one!' 
+                : 'No projects match your filters. Try adjusting your search criteria.'
+              }
+            </Text>
           ) : (
-            projects.map((project) => {
+            filteredProjects.map((project) => {
               const isLiked = likedProjects.includes(project.id);
               const progress = project.funding_goal > 0 
                 ? Math.round((project.current_funding / project.funding_goal) * 100)
@@ -589,7 +1084,31 @@ export default function Projects() {
                   onPress={() => handleProjectPress(project.id)}
                 >
                   {project.image_url && (
-                    <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+                    <View style={styles.projectImage}>
+                      <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+                      {(project.has_audio || project.has_video) && (
+                        <View style={styles.mediaOverlay}>
+                          {project.has_audio && (
+                            <TouchableOpacity
+                              style={styles.mediaBadge}
+                              onPress={() => handlePlayAudio(project.id)}
+                            >
+                              <Volume2 size={12} color="#FFFFFF" />
+                              <Text style={styles.mediaBadgeText}>AUDIO</Text>
+                            </TouchableOpacity>
+                          )}
+                          {project.has_video && (
+                            <TouchableOpacity
+                              style={styles.mediaBadge}
+                              onPress={() => handlePlayVideo(project.id)}
+                            >
+                              <Play size={12} color="#FFFFFF" />
+                              <Text style={styles.mediaBadgeText}>VIDEO</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                    </View>
                   )}
                   
                   <View style={styles.projectContent}>
@@ -599,22 +1118,6 @@ export default function Projects() {
                         <Text style={styles.projectFounder}>by {project.profiles?.full_name || 'Unknown'}</Text>
                       </View>
                       <View style={styles.projectActions}>
-                        {project.has_audio && (
-                          <TouchableOpacity
-                            style={styles.actionButton}
-                            onPress={() => handlePlayAudio(project.id)}
-                          >
-                            <Volume2 size={16} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        )}
-                        {project.has_video && (
-                          <TouchableOpacity
-                            style={styles.actionButton}
-                            onPress={() => handlePlayVideo(project.id)}
-                          >
-                            <Play size={16} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        )}
                         <TouchableOpacity
                           style={styles.actionButton}
                           onPress={() => toggleLike(project.id)}
@@ -627,7 +1130,7 @@ export default function Projects() {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.actionButton}
-                          onPress={() => handleShare(project.id)}
+                          onPress={() => handleShare(project)}
                         >
                           <Share2 size={16} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -688,18 +1191,23 @@ export default function Projects() {
                         <Users size={16} color={colors.textSecondary} />
                         <Text style={styles.teamText}>{project.team_size} team members</Text>
                       </View>
-                      <View style={styles.rating}>
-                        <Star size={16} color={colors.warning} fill={colors.warning} />
-                        <Text style={styles.ratingText}>4.8</Text>
-                      </View>
+                      <TouchableOpacity 
+                        style={styles.contactButton}
+                        onPress={() => handleContactFounder(project)}
+                      >
+                        <MessageCircle size={16} color="#FFFFFF" />
+                        <Text style={styles.contactButtonText}>Contact</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </TouchableOpacity>
               );
             })
           )}
-        </View>
+        </Animated.View>
       </ScrollView>
+
+      {renderFilterModal()}
     </View>
   );
 }
