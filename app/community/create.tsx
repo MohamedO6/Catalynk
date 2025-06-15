@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Tag, X, HelpCircle, MessageCircle, Lightbulb, Code } from 'lucide-react-native';
+import { ArrowLeft, Tag, X, CircleHelp as HelpCircle, MessageCircle, Lightbulb, Code } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
