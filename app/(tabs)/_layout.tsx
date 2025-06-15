@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Chrome as Home, Briefcase, MessageCircle, User, Gamepad2 } from 'lucide-react-native';
+import { Chrome as Home, Briefcase, MessageCircle, User, Wrench } from 'lucide-react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -45,11 +45,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="game"
+        name="ai-tools"
         options={{
-          title: 'Pitch or Ditch',
+          title: 'AI Tools',
           tabBarIcon: ({ size, color }) => (
-            <Gamepad2 size={size} color={color} />
+            <Wrench size={size} color={color} />
           ),
         }}
       />

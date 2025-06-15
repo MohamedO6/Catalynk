@@ -10,20 +10,27 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Tag, X } from 'lucide-react-native';
+import { ArrowLeft, Tag, X, HelpCircle, MessageCircle, Lightbulb, Code } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 const categories = [
   'Startup Advice',
-  'Job Postings', 
-  'Lessons Learned',
-  'Tools & Resources',
-  'Funding',
-  'Technical',
-  'General Discussion',
+  'Technical Help', 
+  'Project Showcase',
+  'Funding Questions',
+  'Technical Discussion',
   'Networking',
+  'General Discussion',
+  'Tools & Resources',
+];
+
+const postTypes = [
+  { id: 'question', label: 'Question', icon: HelpCircle, description: 'Ask for help or advice' },
+  { id: 'discussion', label: 'Discussion', icon: MessageCircle, description: 'Start a conversation' },
+  { id: 'showcase', label: 'Showcase', icon: Lightbulb, description: 'Show off your project' },
+  { id: 'help', label: 'Help Needed', icon: Code, description: 'Need technical assistance' },
 ];
 
 export default function CreatePost() {
@@ -34,6 +41,7 @@ export default function CreatePost() {
     title: '',
     content: '',
     category: '',
+    type: 'discussion',
     tags: [] as string[],
   });
   const [newTag, setNewTag] = useState('');
@@ -167,6 +175,48 @@ export default function CreatePost() {
       fontFamily: 'Inter-Regular',
       color: colors.textSecondary,
       marginBottom: 30,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    postTypesContainer: {
+      marginBottom: 24,
+    },
+    postTypeGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 8,
+    },
+    postTypeButton: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginRight: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: '45%',
+    },
+    postTypeButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    postTypeIcon: {
+      marginRight: 8,
+    },
+    postTypeText: {
+      fontSize: 14,
+      fontFamily: 'Inter-Medium',
+      color: colors.text,
+    },
+    postTypeTextActive: {
+      color: '#FFFFFF',
     },
     inputContainer: {
       marginBottom: 24,
@@ -306,8 +356,41 @@ export default function CreatePost() {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Share with the Community</Text>
         <Text style={styles.subtitle}>
-          Start a discussion, ask for advice, or share your insights
+          Ask questions, share insights, or showcase your projects
         </Text>
+
+        <View style={styles.postTypesContainer}>
+          <Text style={styles.sectionTitle}>Post Type</Text>
+          <View style={styles.postTypeGrid}>
+            {postTypes.map((type) => {
+              const Icon = type.icon;
+              return (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.postTypeButton,
+                    formData.type === type.id && styles.postTypeButtonActive,
+                  ]}
+                  onPress={() => handleInputChange('type', type.id)}
+                >
+                  <Icon 
+                    size={16} 
+                    color={formData.type === type.id ? '#FFFFFF' : colors.text}
+                    style={styles.postTypeIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.postTypeText,
+                      formData.type === type.id && styles.postTypeTextActive,
+                    ]}
+                  >
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Title *</Text>

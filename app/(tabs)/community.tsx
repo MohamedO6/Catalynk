@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Play, Heart, MoveHorizontal as MoreHorizontal, Filter, Plus } from 'lucide-react-native';
+import { Search, TrendingUp, ArrowUp, ArrowDown, MessageCircle, Share2, Heart, MoveHorizontal as MoreHorizontal, Filter, Plus, Code, Lightbulb, HelpCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -21,7 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 
 interface CommunityPost {
   id: string;
-  type: 'episode' | 'discussion' | 'roast';
+  type: 'discussion' | 'question' | 'showcase' | 'help';
   title: string;
   content?: string;
   author: string;
@@ -30,11 +30,8 @@ interface CommunityPost {
   upvotes: number;
   downvotes: number;
   comments: number;
-  episode?: {
-    duration: string;
-    plays: number;
-    image_url: string;
-  };
+  category: string;
+  tags: string[];
   user_vote?: 'up' | 'down' | null;
   is_liked?: boolean;
 }
@@ -42,47 +39,63 @@ interface CommunityPost {
 const mockPosts: CommunityPost[] = [
   {
     id: '1',
-    type: 'episode',
-    title: 'The Future of Remote Work',
+    type: 'question',
+    title: 'How to validate a startup idea before building?',
+    content: 'I have an idea for a fintech app but I\'m not sure how to validate it properly. What are the best methods to test market demand before investing time and money?',
     author: 'Sarah Chen',
     avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
     timestamp: '2 hours ago',
     upvotes: 47,
     downvotes: 3,
     comments: 23,
-    episode: {
-      duration: '15:32',
-      plays: 1247,
-      image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    },
+    category: 'Startup Advice',
+    tags: ['validation', 'fintech', 'market-research'],
   },
   {
     id: '2',
     type: 'discussion',
-    title: 'Best practices for podcast intros?',
-    content: 'I\'m struggling with creating engaging podcast intros. What are your favorite techniques for hooking listeners in the first 30 seconds?',
+    title: 'Best tech stack for MVP development in 2024?',
+    content: 'Looking for recommendations on modern tech stacks that allow for rapid MVP development. Considering React Native + Supabase vs Next.js + Firebase. What are your experiences?',
     author: 'Marcus Johnson',
     avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
     timestamp: '4 hours ago',
     upvotes: 29,
     downvotes: 1,
     comments: 18,
+    category: 'Technical',
+    tags: ['mvp', 'tech-stack', 'react-native'],
   },
   {
     id: '3',
-    type: 'roast',
-    title: 'Roast My Podcast: "Crypto for Cats"',
-    content: 'I created a podcast explaining cryptocurrency using cat analogies. Please roast it mercilessly so I can improve! 🐱',
+    type: 'showcase',
+    title: 'Built an AI-powered project management tool',
+    content: 'After 6 months of development, I\'m excited to share my AI project management tool that helps teams prioritize tasks automatically. Would love feedback from the community!',
     author: 'Emily Rodriguez',
     avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
     timestamp: '1 day ago',
     upvotes: 156,
     downvotes: 12,
     comments: 89,
+    category: 'Project Showcase',
+    tags: ['ai', 'project-management', 'saas'],
+  },
+  {
+    id: '4',
+    type: 'help',
+    title: 'Need help with user authentication implementation',
+    content: 'Struggling with implementing secure user authentication in my React app. Should I use Auth0, Firebase Auth, or build custom? Looking for pros/cons of each approach.',
+    author: 'Alex Kim',
+    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+    timestamp: '2 days ago',
+    upvotes: 34,
+    downvotes: 2,
+    comments: 27,
+    category: 'Technical Help',
+    tags: ['authentication', 'security', 'react'],
   },
 ];
 
-const categories = ['All', 'Episodes', 'Discussions', 'Roast My Podcast', 'Tips & Tricks'];
+const categories = ['All', 'Startup Advice', 'Technical', 'Project Showcase', 'Technical Help', 'Funding', 'Networking'];
 
 export default function Community() {
   const { colors } = useTheme();
@@ -191,10 +204,6 @@ export default function Community() {
     }
   };
 
-  const handlePlayEpisode = (postId: string) => {
-    Alert.alert('Playing Episode', 'Episode player would open here.');
-  };
-
   const handleComment = (postId: string) => {
     router.push(`/community/post/${postId}`);
   };
@@ -211,20 +220,32 @@ export default function Community() {
     }, 1000);
   };
 
+  const getPostTypeIcon = (type: string) => {
+    switch (type) {
+      case 'question': return HelpCircle;
+      case 'discussion': return MessageCircle;
+      case 'showcase': return Lightbulb;
+      case 'help': return Code;
+      default: return MessageCircle;
+    }
+  };
+
   const getPostTypeColor = (type: string) => {
     switch (type) {
-      case 'episode': return colors.primary;
-      case 'discussion': return colors.success;
-      case 'roast': return colors.warning;
+      case 'question': return colors.warning;
+      case 'discussion': return colors.primary;
+      case 'showcase': return colors.success;
+      case 'help': return colors.error;
       default: return colors.textSecondary;
     }
   };
 
   const getPostTypeLabel = (type: string) => {
     switch (type) {
-      case 'episode': return 'Episode';
+      case 'question': return 'Question';
       case 'discussion': return 'Discussion';
-      case 'roast': return 'Roast';
+      case 'showcase': return 'Showcase';
+      case 'help': return 'Help Needed';
       default: return 'Post';
     }
   };
@@ -346,6 +367,8 @@ export default function Community() {
       color: colors.textTertiary,
     },
     postTypeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 8,
@@ -354,6 +377,7 @@ export default function Community() {
       fontSize: 10,
       fontFamily: 'Inter-Bold',
       color: '#FFFFFF',
+      marginLeft: 4,
     },
     postTitle: {
       fontSize: 18,
@@ -369,40 +393,23 @@ export default function Community() {
       lineHeight: 22,
       marginBottom: 12,
     },
-    episodeCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
+    tagsContainer: {
       flexDirection: 'row',
-      alignItems: 'center',
+      flexWrap: 'wrap',
+      marginBottom: 12,
     },
-    episodeImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 8,
-      marginRight: 12,
+    tag: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginRight: 8,
+      marginBottom: 4,
     },
-    episodeInfo: {
-      flex: 1,
-    },
-    episodeDuration: {
-      fontSize: 14,
-      fontFamily: 'Inter-SemiBold',
-      color: colors.primary,
-    },
-    episodePlays: {
+    tagText: {
       fontSize: 12,
-      fontFamily: 'Inter-Regular',
+      fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
-    },
-    playButton: {
-      backgroundColor: colors.primary,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     postActions: {
       flexDirection: 'row',
@@ -513,107 +520,107 @@ export default function Community() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {posts.map((post) => (
-          <TouchableOpacity 
-            key={post.id} 
-            style={styles.postCard}
-            onPress={() => router.push(`/community/post/${post.id}`)}
-          >
-            <View style={styles.postHeader}>
-              <Image source={{ uri: post.avatar }} style={styles.avatar} />
-              <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{post.author}</Text>
-                <Text style={styles.timestamp}>{post.timestamp}</Text>
-              </View>
-              <View style={[
-                styles.postTypeBadge,
-                { backgroundColor: getPostTypeColor(post.type) }
-              ]}>
-                <Text style={styles.postTypeText}>{getPostTypeLabel(post.type)}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.postTitle}>{post.title}</Text>
-            
-            {post.content && (
-              <Text style={styles.postContent}>{post.content}</Text>
-            )}
-
-            {post.episode && (
-              <View style={styles.episodeCard}>
-                <Image source={{ uri: post.episode.image_url }} style={styles.episodeImage} />
-                <View style={styles.episodeInfo}>
-                  <Text style={styles.episodeDuration}>{post.episode.duration}</Text>
-                  <Text style={styles.episodePlays}>{post.episode.plays.toLocaleString()} plays</Text>
+        {posts.map((post) => {
+          const TypeIcon = getPostTypeIcon(post.type);
+          const typeColor = getPostTypeColor(post.type);
+          
+          return (
+            <TouchableOpacity 
+              key={post.id} 
+              style={styles.postCard}
+              onPress={() => router.push(`/community/post/${post.id}`)}
+            >
+              <View style={styles.postHeader}>
+                <Image source={{ uri: post.avatar }} style={styles.avatar} />
+                <View style={styles.authorInfo}>
+                  <Text style={styles.authorName}>{post.author}</Text>
+                  <Text style={styles.timestamp}>{post.timestamp}</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.playButton}
-                  onPress={() => handlePlayEpisode(post.id)}
-                >
-                  <Play size={20} color="#FFFFFF" />
-                </TouchableOpacity>
+                <View style={[
+                  styles.postTypeBadge,
+                  { backgroundColor: typeColor }
+                ]}>
+                  <TypeIcon size={12} color="#FFFFFF" />
+                  <Text style={styles.postTypeText}>{getPostTypeLabel(post.type)}</Text>
+                </View>
               </View>
-            )}
 
-            <View style={styles.postActions}>
-              <View style={styles.postActionsLeft}>
-                <View style={styles.voteContainer}>
-                  <TouchableOpacity
-                    style={styles.voteButton}
-                    onPress={() => handleVote(post.id, 'up')}
+              <Text style={styles.postTitle}>{post.title}</Text>
+              
+              {post.content && (
+                <Text style={styles.postContent} numberOfLines={3}>{post.content}</Text>
+              )}
+
+              {post.tags && post.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  {post.tags.map((tag, index) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>#{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.postActions}>
+                <View style={styles.postActionsLeft}>
+                  <View style={styles.voteContainer}>
+                    <TouchableOpacity
+                      style={styles.voteButton}
+                      onPress={() => handleVote(post.id, 'up')}
+                    >
+                      <ArrowUp 
+                        size={20} 
+                        color={post.user_vote === 'up' ? colors.success : colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                    <Text style={styles.voteCount}>
+                      {post.upvotes - post.downvotes}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.voteButton}
+                      onPress={() => handleVote(post.id, 'down')}
+                    >
+                      <ArrowDown 
+                        size={20} 
+                        color={post.user_vote === 'down' ? colors.error : colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity 
+                    style={styles.commentsButton}
+                    onPress={() => handleComment(post.id)}
                   >
-                    <ArrowUp 
-                      size={20} 
-                      color={post.user_vote === 'up' ? colors.success : colors.textSecondary} 
+                    <MessageCircle size={18} color={colors.textSecondary} />
+                    <Text style={styles.commentsCount}>{post.comments}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.postActionsRight}>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => handleLike(post.id)}
+                  >
+                    <Heart 
+                      size={18} 
+                      color={post.is_liked ? colors.error : colors.textSecondary}
+                      fill={post.is_liked ? colors.error : 'none'}
                     />
                   </TouchableOpacity>
-                  <Text style={styles.voteCount}>
-                    {post.upvotes - post.downvotes}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.voteButton}
-                    onPress={() => handleVote(post.id, 'down')}
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => handleShare(post)}
                   >
-                    <ArrowDown 
-                      size={20} 
-                      color={post.user_vote === 'down' ? colors.error : colors.textSecondary} 
-                    />
+                    <Share2 size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionButton}>
+                    <MoreHorizontal size={18} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity 
-                  style={styles.commentsButton}
-                  onPress={() => handleComment(post.id)}
-                >
-                  <MessageCircle size={18} color={colors.textSecondary} />
-                  <Text style={styles.commentsCount}>{post.comments}</Text>
-                </TouchableOpacity>
               </View>
-
-              <View style={styles.postActionsRight}>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleLike(post.id)}
-                >
-                  <Heart 
-                    size={18} 
-                    color={post.is_liked ? colors.error : colors.textSecondary}
-                    fill={post.is_liked ? colors.error : 'none'}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleShare(post)}
-                >
-                  <Share2 size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
-                  <MoreHorizontal size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
