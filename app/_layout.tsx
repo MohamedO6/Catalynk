@@ -43,6 +43,7 @@ export default function RootLayout() {
             <Stack.Screen name="community/create" options={{ headerShown: false }} />
             <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="subscription-management" options={{ headerShown: false }} />
+            <Stack.Screen name="callback" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
         )}

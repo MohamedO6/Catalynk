@@ -63,9 +63,19 @@ export const signIn = async (email: string, password: string) => {
 
 export const signInWithOAuth = async (provider: 'google' | 'github') => {
   try {
-    const redirectTo = makeRedirectUri({
-      path: '/auth/callback',
-    });
+    let redirectTo: string;
+    
+    if (Platform.OS === 'web') {
+      // For web, use the current origin + callback path
+      redirectTo = `${window.location.origin}/callback`;
+    } else {
+      // For mobile, use expo-auth-session
+      redirectTo = makeRedirectUri({
+        path: '/callback',
+      });
+    }
+
+    console.log('OAuth redirect URL:', redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
