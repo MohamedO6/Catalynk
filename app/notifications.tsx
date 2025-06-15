@@ -80,6 +80,7 @@ export default function Notifications() {
           sender_avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
           is_read: true,
           created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+          related_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', // Updated to use UUID from community posts
         },
       ];
 
@@ -112,7 +113,7 @@ export default function Notifications() {
         router.push(`/project/${notification.related_id || '1'}`);
         break;
       case 'comment':
-        router.push(`/community/post/${notification.related_id || '1'}`);
+        router.push(`/community/post/${notification.related_id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'}`);
         break;
     }
   };
