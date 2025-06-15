@@ -84,6 +84,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       .single();
     
     if (error) {
+      // Handle the specific case where no profile is found (PGRST116 error)
+      if (error.code === 'PGRST116') {
+        // No profile found, return null gracefully
+        return null;
+      }
       console.error('Get user profile error:', error);
       return null;
     }
