@@ -54,18 +54,89 @@ export default function CreateProject() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [hasAudio, setHasAudio] = useState(false);
   const [hasVideo, setHasVideo] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+
+    // Apply field-specific validation
+    let processedValue = value;
+
+    switch (field) {
+      case 'fundingGoal':
+      case 'teamSize':
+        // Only allow numbers
+        processedValue = value.replace(/[^0-9]/g, '');
+        break;
+      case 'website':
+        // Basic URL validation
+        if (value && !isValidUrl(value)) {
+          setErrors(prev => ({ ...prev, [field]: 'Please enter a valid URL (e.g., https://example.com)' }));
+        }
+        break;
+      case 'title':
+        // Limit to 100 characters
+        if (value.length > 100) {
+          setErrors(prev => ({ ...prev, [field]: 'Title must be 100 characters or less' }));
+          return;
+        }
+        break;
+      case 'description':
+        // Limit to 500 characters
+        if (value.length > 500) {
+          setErrors(prev => ({ ...prev, [field]: 'Description must be 500 characters or less' }));
+          return;
+        }
+        break;
+      case 'problem':
+      case 'solution':
+      case 'market':
+      case 'businessModel':
+        // Limit to 1000 characters
+        if (value.length > 1000) {
+          setErrors(prev => ({ ...prev, [field]: 'This field must be 1000 characters or less' }));
+          return;
+        }
+        break;
+      case 'competition':
+      case 'traction':
+      case 'pitch':
+        // Limit to 800 characters
+        if (value.length > 800) {
+          setErrors(prev => ({ ...prev, [field]: 'This field must be 800 characters or less' }));
+          return;
+        }
+        break;
+    }
+
+    setFormData({ ...formData, [field]: processedValue });
+  };
+
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+      return urlPattern.test(url);
+    } catch {
+      return false;
+    }
   };
 
   const addTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim()) && formData.tags.length < 10) {
+      if (newTag.trim().length > 20) {
+        Alert.alert('Tag too long', 'Tags must be 20 characters or less');
+        return;
+      }
       setFormData({
         ...formData,
         tags: [...formData.tags, newTag.trim()]
       });
       setNewTag('');
+    } else if (formData.tags.length >= 10) {
+      Alert.alert('Too many tags', 'You can add up to 10 tags only');
     }
   };
 
@@ -99,23 +170,93 @@ export default function CreateProject() {
   };
 
   const validateStep = (step: number) => {
+    const newErrors: Record<string, string> = {};
+
     switch (step) {
       case 1:
-        return formData.title.trim() && formData.description.trim() && formData.category;
+        if (!formData.title.trim()) {
+          newErrors.title = 'Project title is required';
+        } else if (formData.title.length < 5) {
+          newErrors.title = 'Title must be at least 5 characters';
+        }
+        
+        if (!formData.description.trim()) {
+          newErrors.description = 'Description is required';
+        } else if (formData.description.length < 20) {
+          newErrors.description = 'Description must be at least 20 characters';
+        }
+        
+        if (!formData.category) {
+          newErrors.category = 'Please select a category';
+        }
+
+        if (formData.website && !isValidUrl(formData.website)) {
+          newErrors.website = 'Please enter a valid URL';
+        }
+        break;
+
       case 2:
-        return formData.problem.trim() && formData.solution.trim() && formData.market.trim();
+        if (!formData.problem.trim()) {
+          newErrors.problem = 'Problem statement is required';
+        } else if (formData.problem.length < 50) {
+          newErrors.problem = 'Problem statement must be at least 50 characters';
+        }
+        
+        if (!formData.solution.trim()) {
+          newErrors.solution = 'Solution description is required';
+        } else if (formData.solution.length < 50) {
+          newErrors.solution = 'Solution description must be at least 50 characters';
+        }
+        
+        if (!formData.market.trim()) {
+          newErrors.market = 'Target market description is required';
+        } else if (formData.market.length < 30) {
+          newErrors.market = 'Market description must be at least 30 characters';
+        }
+        break;
+
       case 3:
-        return formData.businessModel.trim() && formData.fundingStage;
-      default:
-        return true;
+        if (!formData.businessModel.trim()) {
+          newErrors.businessModel = 'Business model is required';
+        } else if (formData.businessModel.length < 30) {
+          newErrors.businessModel = 'Business model must be at least 30 characters';
+        }
+        
+        if (!formData.fundingStage) {
+          newErrors.fundingStage = 'Please select a funding stage';
+        }
+
+        if (formData.fundingStage !== 'Not Seeking Funding' && formData.fundingGoal) {
+          const goal = parseInt(formData.fundingGoal);
+          if (goal < 1000) {
+            newErrors.fundingGoal = 'Funding goal must be at least $1,000';
+          } else if (goal > 100000000) {
+            newErrors.fundingGoal = 'Funding goal cannot exceed $100,000,000';
+          }
+        }
+
+        if (formData.teamSize) {
+          const size = parseInt(formData.teamSize);
+          if (size < 1) {
+            newErrors.teamSize = 'Team size must be at least 1';
+          } else if (size > 1000) {
+            newErrors.teamSize = 'Team size cannot exceed 1,000';
+          }
+        }
+        break;
+
+      case 4:
+        // Optional validations for step 4
+        break;
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, 4));
-    } else {
-      Alert.alert('Missing Information', 'Please fill in all required fields before continuing.');
     }
   };
 
@@ -125,7 +266,6 @@ export default function CreateProject() {
 
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
       return;
     }
 
@@ -138,27 +278,27 @@ export default function CreateProject() {
     
     try {
       const projectData = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         category: formData.category,
         founder_id: profile.id,
         funding_goal: formData.fundingGoal ? parseFloat(formData.fundingGoal) : 0,
         current_funding: 0,
         funding_stage: formData.fundingStage,
         team_size: formData.teamSize ? parseInt(formData.teamSize) : 1,
-        location: formData.location || null,
-        website: formData.website || null,
+        location: formData.location.trim() || null,
+        website: formData.website.trim() || null,
         tags: formData.tags,
         image_url: selectedImage,
         has_audio: hasAudio,
         has_video: hasVideo,
-        problem: formData.problem,
-        solution: formData.solution,
-        market: formData.market,
-        competition: formData.competition || null,
-        business_model: formData.businessModel,
-        traction: formData.traction || null,
-        pitch: formData.pitch || null,
+        problem: formData.problem.trim(),
+        solution: formData.solution.trim(),
+        market: formData.market.trim(),
+        competition: formData.competition.trim() || null,
+        business_model: formData.businessModel.trim(),
+        traction: formData.traction.trim() || null,
+        pitch: formData.pitch.trim() || null,
         status: 'active',
       };
 
@@ -220,33 +360,59 @@ export default function CreateProject() {
     </View>
   );
 
+  const renderError = (field: string) => {
+    if (errors[field]) {
+      return <Text style={styles.errorText}>{errors[field]}</Text>;
+    }
+    return null;
+  };
+
+  const renderCharacterCount = (field: string, maxLength: number) => {
+    const currentLength = formData[field as keyof typeof formData]?.toString().length || 0;
+    return (
+      <Text style={[
+        styles.characterCount,
+        currentLength > maxLength * 0.9 && styles.characterCountWarning,
+        currentLength >= maxLength && styles.characterCountError
+      ]}>
+        {currentLength}/{maxLength}
+      </Text>
+    );
+  };
+
   const renderStep1 = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Basic Information</Text>
       <Text style={styles.stepSubtitle}>Tell us about your project</Text>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Project Title *</Text>
+        <Text style={styles.label}>Project Title * (5-100 characters)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errors.title && styles.inputError]}
           placeholder="Enter your project title"
           placeholderTextColor={colors.textTertiary}
           value={formData.title}
           onChangeText={(value) => handleInputChange('title', value)}
+          maxLength={100}
         />
+        {renderCharacterCount('title', 100)}
+        {renderError('title')}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Short Description *</Text>
+        <Text style={styles.label}>Short Description * (20-500 characters)</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, errors.description && styles.inputError]}
           placeholder="Briefly describe your project in 1-2 sentences"
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={3}
           value={formData.description}
           onChangeText={(value) => handleInputChange('description', value)}
+          maxLength={500}
         />
+        {renderCharacterCount('description', 500)}
+        {renderError('description')}
       </View>
 
       <View style={styles.inputContainer}>
@@ -270,6 +436,7 @@ export default function CreateProject() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        {renderError('category')}
       </View>
 
       <View style={styles.inputContainer}>
@@ -282,23 +449,26 @@ export default function CreateProject() {
             placeholderTextColor={colors.textTertiary}
             value={formData.location}
             onChangeText={(value) => handleInputChange('location', value)}
+            maxLength={100}
           />
         </View>
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Website/Demo</Text>
+        <Text style={styles.label}>Website/Demo URL</Text>
         <View style={styles.inputWithIcon}>
           <Link size={20} color={colors.textSecondary} />
           <TextInput
-            style={styles.inputWithIconText}
+            style={[styles.inputWithIconText, errors.website && styles.inputError]}
             placeholder="https://yourproject.com"
             placeholderTextColor={colors.textTertiary}
             value={formData.website}
             onChangeText={(value) => handleInputChange('website', value)}
             autoCapitalize="none"
+            keyboardType="url"
           />
         </View>
+        {renderError('website')}
       </View>
     </View>
   );
@@ -309,46 +479,55 @@ export default function CreateProject() {
       <Text style={styles.stepSubtitle}>Describe your project in detail</Text>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Problem Statement *</Text>
+        <Text style={styles.label}>Problem Statement * (50-1000 characters)</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, errors.problem && styles.inputError]}
           placeholder="What problem are you solving?"
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={4}
           value={formData.problem}
           onChangeText={(value) => handleInputChange('problem', value)}
+          maxLength={1000}
         />
+        {renderCharacterCount('problem', 1000)}
+        {renderError('problem')}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Solution *</Text>
+        <Text style={styles.label}>Solution * (50-1000 characters)</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, errors.solution && styles.inputError]}
           placeholder="How does your project solve this problem?"
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={4}
           value={formData.solution}
           onChangeText={(value) => handleInputChange('solution', value)}
+          maxLength={1000}
         />
+        {renderCharacterCount('solution', 1000)}
+        {renderError('solution')}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Target Market *</Text>
+        <Text style={styles.label}>Target Market * (30-1000 characters)</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, errors.market && styles.inputError]}
           placeholder="Who is your target audience?"
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={3}
           value={formData.market}
           onChangeText={(value) => handleInputChange('market', value)}
+          maxLength={1000}
         />
+        {renderCharacterCount('market', 1000)}
+        {renderError('market')}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Competition Analysis</Text>
+        <Text style={styles.label}>Competition Analysis (up to 800 characters)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Who are your competitors and how are you different?"
@@ -357,7 +536,9 @@ export default function CreateProject() {
           numberOfLines={3}
           value={formData.competition}
           onChangeText={(value) => handleInputChange('competition', value)}
+          maxLength={800}
         />
+        {renderCharacterCount('competition', 800)}
       </View>
     </View>
   );
@@ -368,16 +549,19 @@ export default function CreateProject() {
       <Text style={styles.stepSubtitle}>Tell us about your business model and funding needs</Text>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Business Model *</Text>
+        <Text style={styles.label}>Business Model * (30-1000 characters)</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, errors.businessModel && styles.inputError]}
           placeholder="How will you make money?"
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={3}
           value={formData.businessModel}
           onChangeText={(value) => handleInputChange('businessModel', value)}
+          maxLength={1000}
         />
+        {renderCharacterCount('businessModel', 1000)}
+        {renderError('businessModel')}
       </View>
 
       <View style={styles.inputContainer}>
@@ -401,15 +585,16 @@ export default function CreateProject() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        {renderError('fundingStage')}
       </View>
 
       {formData.fundingStage !== 'Not Seeking Funding' && (
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Funding Goal</Text>
+          <Text style={styles.label}>Funding Goal ($1,000 - $100,000,000)</Text>
           <View style={styles.inputWithIcon}>
             <DollarSign size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.inputWithIconText}
+              style={[styles.inputWithIconText, errors.fundingGoal && styles.inputError]}
               placeholder="100000"
               placeholderTextColor={colors.textTertiary}
               value={formData.fundingGoal}
@@ -417,15 +602,16 @@ export default function CreateProject() {
               keyboardType="numeric"
             />
           </View>
+          {renderError('fundingGoal')}
         </View>
       )}
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Team Size</Text>
+        <Text style={styles.label}>Team Size (1-1000)</Text>
         <View style={styles.inputWithIcon}>
           <Users size={20} color={colors.textSecondary} />
           <TextInput
-            style={styles.inputWithIconText}
+            style={[styles.inputWithIconText, errors.teamSize && styles.inputError]}
             placeholder="5"
             placeholderTextColor={colors.textTertiary}
             value={formData.teamSize}
@@ -433,10 +619,11 @@ export default function CreateProject() {
             keyboardType="numeric"
           />
         </View>
+        {renderError('teamSize')}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Traction</Text>
+        <Text style={styles.label}>Traction (up to 800 characters)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="What progress have you made? (users, revenue, partnerships, etc.)"
@@ -445,7 +632,9 @@ export default function CreateProject() {
           numberOfLines={3}
           value={formData.traction}
           onChangeText={(value) => handleInputChange('traction', value)}
+          maxLength={800}
         />
+        {renderCharacterCount('traction', 800)}
       </View>
     </View>
   );
@@ -503,7 +692,7 @@ export default function CreateProject() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Tags</Text>
+        <Text style={styles.label}>Tags (up to 10 tags, max 20 characters each)</Text>
         <View style={styles.tagInputContainer}>
           <View style={styles.inputWithIcon}>
             <Tag size={20} color={colors.textSecondary} />
@@ -514,6 +703,7 @@ export default function CreateProject() {
               value={newTag}
               onChangeText={setNewTag}
               onSubmitEditing={addTag}
+              maxLength={20}
             />
           </View>
           <TouchableOpacity style={styles.addTagButton} onPress={addTag}>
@@ -534,7 +724,7 @@ export default function CreateProject() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Elevator Pitch</Text>
+        <Text style={styles.label}>Elevator Pitch (up to 800 characters)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Summarize your project in 30 seconds or less"
@@ -543,7 +733,9 @@ export default function CreateProject() {
           numberOfLines={4}
           value={formData.pitch}
           onChangeText={(value) => handleInputChange('pitch', value)}
+          maxLength={800}
         />
+        {renderCharacterCount('pitch', 800)}
       </View>
     </View>
   );
@@ -650,9 +842,31 @@ export default function CreateProject() {
       fontFamily: 'Inter-Regular',
       color: colors.text,
     },
+    inputError: {
+      borderColor: colors.error,
+    },
     textArea: {
       height: 100,
       textAlignVertical: 'top',
+    },
+    errorText: {
+      fontSize: 14,
+      fontFamily: 'Inter-Medium',
+      color: colors.error,
+      marginTop: 4,
+    },
+    characterCount: {
+      fontSize: 12,
+      fontFamily: 'Inter-Regular',
+      color: colors.textTertiary,
+      textAlign: 'right',
+      marginTop: 4,
+    },
+    characterCountWarning: {
+      color: colors.warning,
+    },
+    characterCountError: {
+      color: colors.error,
     },
     inputWithIcon: {
       flexDirection: 'row',
