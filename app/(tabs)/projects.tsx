@@ -12,6 +12,7 @@ import {
   Modal,
   Share,
   Linking,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { 
@@ -39,10 +40,14 @@ import {
   TrendingUp,
   Calendar,
   Tag,
+  ExternalLink,
+  Phone,
+  Copy,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import * as Clipboard from 'expo-clipboard';
 
 const { width } = Dimensions.get('window');
 
@@ -55,6 +60,7 @@ interface Project {
   funding_goal: number;
   current_funding: number;
   location?: string;
+  website?: string;
   image_url?: string;
   has_audio: boolean;
   has_video: boolean;
@@ -64,6 +70,7 @@ interface Project {
   profiles: {
     full_name: string;
     avatar_url?: string;
+    email?: string;
   };
 }
 
@@ -89,6 +96,7 @@ const mockProjects: Project[] = [
     funding_goal: 200000,
     current_funding: 125000,
     location: 'San Francisco, CA',
+    website: 'https://ecotrack.app',
     image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
     has_audio: true,
     has_video: true,
@@ -98,6 +106,7 @@ const mockProjects: Project[] = [
     profiles: {
       full_name: 'Sarah Chen',
       avatar_url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+      email: 'sarah@ecotrack.app',
     },
   },
   {
@@ -109,6 +118,7 @@ const mockProjects: Project[] = [
     funding_goal: 150000,
     current_funding: 89000,
     location: 'New York, NY',
+    website: 'https://mindfulai.health',
     image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
     has_audio: false,
     has_video: true,
@@ -118,6 +128,7 @@ const mockProjects: Project[] = [
     profiles: {
       full_name: 'Marcus Johnson',
       avatar_url: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+      email: 'marcus@mindfulai.health',
     },
   },
   {
@@ -138,6 +149,7 @@ const mockProjects: Project[] = [
     profiles: {
       full_name: 'Dr. Emily Rodriguez',
       avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+      email: 'emily@blocklearn.edu',
     },
   },
   {
@@ -149,6 +161,7 @@ const mockProjects: Project[] = [
     funding_goal: 75000,
     current_funding: 45000,
     location: 'Los Angeles, CA',
+    website: 'https://foodiebot.ai',
     image_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
     has_audio: false,
     has_video: false,
@@ -158,6 +171,7 @@ const mockProjects: Project[] = [
     profiles: {
       full_name: 'Alex Kim',
       avatar_url: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+      email: 'alex@foodiebot.ai',
     },
   },
   {
@@ -169,6 +183,7 @@ const mockProjects: Project[] = [
     funding_goal: 500000,
     current_funding: 320000,
     location: 'Miami, FL',
+    website: 'https://cryptowallet.pro',
     image_url: 'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
     has_audio: true,
     has_video: true,
@@ -178,6 +193,7 @@ const mockProjects: Project[] = [
     profiles: {
       full_name: 'David Park',
       avatar_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop',
+      email: 'david@cryptowallet.pro',
     },
   },
 ];
@@ -319,57 +335,134 @@ export default function Projects() {
   };
 
   const generateShareLink = (project: Project) => {
-    // Generate unique shareable link
+    // Generate unique shareable link with referral tracking
     const baseUrl = 'https://catalynk.app';
-    return `${baseUrl}/project/${project.id}?ref=${profile?.id || 'guest'}`;
+    const referralId = profile?.id || 'guest';
+    return `${baseUrl}/project/${project.id}?ref=${referralId}&utm_source=share&utm_medium=social&utm_campaign=project_share`;
   };
 
   const handleShare = async (project: Project) => {
     try {
       const shareUrl = generateShareLink(project);
-      const shareMessage = `Check out "${project.title}" by ${project.profiles.full_name} on Catalynk!\n\n${project.description}\n\n${shareUrl}`;
+      const shareTitle = `${project.title} by ${project.profiles.full_name}`;
+      const shareMessage = `🚀 Check out "${project.title}" by ${project.profiles.full_name} on Catalynk!\n\n${project.description}\n\n💰 ${formatCurrency(project.current_funding)} raised of ${formatCurrency(project.funding_goal)} goal\n👥 ${project.team_size} team members\n\n${shareUrl}`;
 
-      const result = await Share.share({
-        message: shareMessage,
-        url: shareUrl,
-        title: project.title,
-      });
+      if (Platform.OS === 'web') {
+        // Web sharing - try native Web Share API first, fallback to clipboard
+        if (navigator.share) {
+          await navigator.share({
+            title: shareTitle,
+            text: project.description,
+            url: shareUrl,
+          });
+          Alert.alert('✅ Shared Successfully!', 'Project has been shared.');
+        } else {
+          // Fallback to clipboard
+          await Clipboard.setStringAsync(shareUrl);
+          Alert.alert('📋 Link Copied!', 'Project link has been copied to clipboard. You can now paste it anywhere to share!');
+        }
+      } else {
+        // Mobile sharing
+        const result = await Share.share({
+          message: shareMessage,
+          url: shareUrl,
+          title: shareTitle,
+        }, {
+          dialogTitle: `Share ${project.title}`,
+          subject: shareTitle,
+        });
 
-      if (result.action === Share.sharedAction) {
-        Alert.alert('Shared Successfully!', 'Project link has been shared.');
+        if (result.action === Share.sharedAction) {
+          if (result.activityType) {
+            Alert.alert('✅ Shared Successfully!', `Project shared via ${result.activityType}`);
+          } else {
+            Alert.alert('✅ Shared Successfully!', 'Project has been shared.');
+          }
+        }
       }
     } catch (error) {
-      // Fallback for web or if Share API fails
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      console.error('Share error:', error);
+      // Ultimate fallback - copy to clipboard
+      try {
         const shareUrl = generateShareLink(project);
-        await navigator.clipboard.writeText(shareUrl);
-        Alert.alert('Link Copied!', 'Project link has been copied to clipboard.');
-      } else {
-        Alert.alert('Share Project', 'Project link: ' + generateShareLink(project));
+        await Clipboard.setStringAsync(shareUrl);
+        Alert.alert('📋 Link Copied!', 'Project link has been copied to clipboard as a fallback.');
+      } catch (clipboardError) {
+        Alert.alert('❌ Share Failed', 'Unable to share the project. Please try again.');
       }
+    }
+  };
+
+  const handleVisitWebsite = async (website: string) => {
+    try {
+      // Ensure the URL has a protocol
+      let url = website;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
+
+      const supported = await Linking.canOpenURL(url);
+      
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('❌ Cannot Open Website', 'Unable to open the website. Please check the URL and try again.');
+      }
+    } catch (error) {
+      console.error('Website opening error:', error);
+      Alert.alert('❌ Error', 'Failed to open website. Please try again.');
     }
   };
 
   const handleContactFounder = (project: Project) => {
     Alert.alert(
-      'Contact Founder',
-      `Would you like to contact ${project.profiles.full_name}?`,
+      '📞 Contact Founder',
+      `How would you like to contact ${project.profiles.full_name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Send Message', 
-          onPress: () => router.push(`/messaging/${project.founder_id}`)
+          text: '💬 Send Message', 
+          onPress: () => handleSendMessage(project)
         },
         { 
-          text: 'Send Email', 
-          onPress: () => {
-            const subject = `Interested in ${project.title}`;
-            const body = `Hi ${project.profiles.full_name},\n\nI'm interested in your project "${project.title}" and would like to learn more.\n\nBest regards,\n${profile?.full_name || 'A Catalynk User'}`;
-            Linking.openURL(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-          }
+          text: '📧 Send Email', 
+          onPress: () => handleSendEmail(project)
         }
       ]
     );
+  };
+
+  const handleSendMessage = (project: Project) => {
+    // Navigate to messaging screen
+    router.push(`/messaging/${project.founder_id}`);
+  };
+
+  const handleSendEmail = async (project: Project) => {
+    try {
+      const subject = encodeURIComponent(`Interested in ${project.title}`);
+      const body = encodeURIComponent(
+        `Hi ${project.profiles.full_name},\n\nI'm interested in your project "${project.title}" and would like to learn more about it.\n\nProject: ${project.title}\nCategory: ${project.category}\nFunding: ${formatCurrency(project.current_funding)} of ${formatCurrency(project.funding_goal)}\n\nI'd love to discuss potential collaboration opportunities.\n\nBest regards,\n${profile?.full_name || 'A Catalynk User'}`
+      );
+      
+      const emailUrl = `mailto:${project.profiles.email || ''}?subject=${subject}&body=${body}`;
+      
+      const supported = await Linking.canOpenURL(emailUrl);
+      
+      if (supported) {
+        await Linking.openURL(emailUrl);
+      } else {
+        // Fallback - copy email to clipboard
+        if (project.profiles.email) {
+          await Clipboard.setStringAsync(project.profiles.email);
+          Alert.alert('📧 Email Copied', `${project.profiles.full_name}'s email has been copied to clipboard: ${project.profiles.email}`);
+        } else {
+          Alert.alert('❌ No Email Available', 'No email address is available for this founder.');
+        }
+      }
+    } catch (error) {
+      console.error('Email error:', error);
+      Alert.alert('❌ Error', 'Failed to open email client. Please try again.');
+    }
   };
 
   const clearFilters = () => {
@@ -753,6 +846,20 @@ export default function Projects() {
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
       marginLeft: 6,
+    },
+    websiteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    websiteText: {
+      fontSize: 12,
+      fontFamily: 'Inter-SemiBold',
+      color: colors.primary,
+      marginLeft: 4,
     },
     fundingContainer: {
       marginBottom: 16,
@@ -1152,6 +1259,15 @@ export default function Projects() {
                         <Clock size={16} color={colors.textSecondary} />
                         <Text style={styles.metaText}>{formatTimeAgo(project.created_at)}</Text>
                       </View>
+                      {project.website && (
+                        <TouchableOpacity 
+                          style={styles.websiteButton}
+                          onPress={() => handleVisitWebsite(project.website!)}
+                        >
+                          <ExternalLink size={12} color={colors.primary} />
+                          <Text style={styles.websiteText}>Visit Website</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
 
                     {project.funding_goal > 0 && (
