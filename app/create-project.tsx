@@ -9,9 +9,10 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Upload, Play, Volume2, Tag, DollarSign, Users, Calendar, MapPin, Link, X, CircleCheck as CheckCircle, Trash2, FileText, Eye } from 'lucide-react-native';
+import { ArrowLeft, Upload, Tag, DollarSign, Users, MapPin, Link, X, CircleCheck as CheckCircle, Trash2, FileText, Eye } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +41,7 @@ export default function CreateProject() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -61,14 +63,10 @@ export default function CreateProject() {
   });
   const [newTag, setNewTag] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [hasAudio, setHasAudio] = useState(false);
-  const [hasVideo, setHasVideo] = useState(false);
-  const [audioFile, setAudioFile] = useState<any>(null);
-  const [videoFile, setVideoFile] = useState<any>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [generatingAudio, setGeneratingAudio] = useState(false);
-  const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     // Clear error when user starts typing
@@ -220,94 +218,9 @@ export default function CreateProject() {
     );
   };
 
-  const previewFile = (file: UploadedFile) => {
-    if (file.type.startsWith('image/')) {
-      Alert.alert('Image Preview', 'Image preview would open here');
-    } else if (file.type === 'application/pdf') {
-      Alert.alert('PDF Preview', `PDF viewer would open for: ${file.name}`);
-    } else {
-      Alert.alert('File Info', `File: ${file.name}\nType: ${file.type}\nSize: ${file.size ? Math.round(file.size / 1024) + ' KB' : 'Unknown'}`);
-    }
-  };
-
-  const generateAudio = async () => {
-    if (!formData.pitch.trim()) {
-      Alert.alert('Missing Pitch', 'Please write your elevator pitch first to generate audio.');
-      return;
-    }
-
-    setGeneratingAudio(true);
-    
-    try {
-      // Simulate AI audio generation
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      setHasAudio(true);
-      setAudioFile({ uri: 'mock-audio-file', name: 'pitch-audio.mp3' });
-      Alert.alert('Audio Generated', 'Your project pitch has been converted to audio using AI voice synthesis.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate audio. Please try again.');
-    } finally {
-      setGeneratingAudio(false);
-    }
-  };
-
-  const generateVideo = async () => {
-    if (!formData.pitch.trim()) {
-      Alert.alert('Missing Pitch', 'Please write your elevator pitch first to generate video.');
-      return;
-    }
-
-    setGeneratingVideo(true);
-    
-    try {
-      // Simulate AI video generation
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      setHasVideo(true);
-      setVideoFile({ uri: 'mock-video-file', name: 'pitch-video.mp4' });
-      Alert.alert('Video Generated', 'A personalized video introduction has been created using AI avatars.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate video. Please try again.');
-    } finally {
-      setGeneratingVideo(false);
-    }
-  };
-
-  const deleteAudio = () => {
-    Alert.alert(
-      'Delete Audio',
-      'Are you sure you want to delete the generated audio?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            setHasAudio(false);
-            setAudioFile(null);
-          }
-        }
-      ]
-    );
-  };
-
-  const deleteVideo = () => {
-    Alert.alert(
-      'Delete Video',
-      'Are you sure you want to delete the generated video?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            setHasVideo(false);
-            setVideoFile(null);
-          }
-        }
-      ]
-    );
+  const handlePreviewFile = (file: UploadedFile) => {
+    setPreviewFile(file);
+    setShowPreview(true);
   };
 
   const validateStep = (step: number) => {
@@ -454,8 +367,8 @@ export default function CreateProject() {
         website: formData.website.trim() || null,
         tags: formData.tags,
         image_url: selectedImage,
-        has_audio: hasAudio,
-        has_video: hasVideo,
+        has_audio: false,
+        has_video: false,
         problem: formData.problem.trim(),
         solution: formData.solution.trim(),
         market: formData.market.trim(),
@@ -482,18 +395,15 @@ export default function CreateProject() {
 
       console.log('Project created successfully:', data);
 
-      Alert.alert(
-        'Project Created!',
-        'Your project has been successfully created and is now live on the platform.',
-        [
-          {
-            text: 'View Projects',
-            onPress: () => {
-              router.replace('/(tabs)/projects');
-            }
-          }
-        ]
-      );
+      // Show success modal
+      setShowSuccessModal(true);
+      
+      // Auto-redirect after 3 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.replace('/(tabs)/projects');
+      }, 3000);
+
     } catch (error) {
       console.error('Unexpected error:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -555,6 +465,76 @@ export default function CreateProject() {
     if (type.includes('text')) return '📄';
     return '📎';
   };
+
+  const renderFilePreview = () => {
+    if (!previewFile) return null;
+
+    return (
+      <Modal
+        visible={showPreview}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPreview(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.previewModal}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>{previewFile.name}</Text>
+              <TouchableOpacity onPress={() => setShowPreview(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.previewContent}>
+              {previewFile.type.startsWith('image/') ? (
+                <Image source={{ uri: previewFile.uri }} style={styles.previewImage} />
+              ) : previewFile.type === 'application/pdf' ? (
+                <View style={styles.pdfPreview}>
+                  <FileText size={64} color={colors.textSecondary} />
+                  <Text style={styles.pdfText}>PDF Document</Text>
+                  <Text style={styles.pdfSubtext}>
+                    {previewFile.size ? `${Math.round(previewFile.size / 1024)} KB` : 'Unknown size'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.filePreview}>
+                  <Text style={styles.fileIcon}>{getFileIcon(previewFile.type)}</Text>
+                  <Text style={styles.fileName}>{previewFile.name}</Text>
+                  <Text style={styles.fileType}>{previewFile.type}</Text>
+                  <Text style={styles.fileSize}>
+                    {previewFile.size ? `${Math.round(previewFile.size / 1024)} KB` : 'Unknown size'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderSuccessModal = () => (
+    <Modal
+      visible={showSuccessModal}
+      transparent={true}
+      animationType="fade"
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.successModal}>
+          <CheckCircle size={64} color={colors.success} />
+          <Text style={styles.successTitle}>Project Created Successfully!</Text>
+          <Text style={styles.successMessage}>
+            Your project has been submitted and is now live on the platform. 
+            You'll be redirected to the projects feed shortly.
+          </Text>
+          <View style={styles.successLoader}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.successLoaderText}>Redirecting...</Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const renderStep1 = () => (
     <View style={styles.stepContent}>
@@ -857,7 +837,7 @@ export default function CreateProject() {
                 <View style={styles.fileActions}>
                   <TouchableOpacity 
                     style={styles.fileActionButton}
-                    onPress={() => previewFile(file)}
+                    onPress={() => handlePreviewFile(file)}
                   >
                     <Eye size={16} color={colors.primary} />
                   </TouchableOpacity>
@@ -872,59 +852,6 @@ export default function CreateProject() {
             ))}
           </View>
         )}
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>AI-Generated Content</Text>
-        <View style={styles.aiContentContainer}>
-          <View style={styles.aiItemContainer}>
-            <TouchableOpacity
-              style={[styles.aiButton, hasAudio && styles.aiButtonActive]}
-              onPress={generateAudio}
-              disabled={generatingAudio}
-            >
-              {generatingAudio ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : hasAudio ? (
-                <CheckCircle size={20} color="#FFFFFF" />
-              ) : (
-                <Volume2 size={20} color={colors.textSecondary} />
-              )}
-              <Text style={[styles.aiButtonText, hasAudio && styles.aiButtonTextActive]}>
-                {generatingAudio ? 'Generating...' : hasAudio ? 'Audio Generated' : 'Generate Audio Pitch'}
-              </Text>
-            </TouchableOpacity>
-            {hasAudio && (
-              <TouchableOpacity style={styles.deleteButton} onPress={deleteAudio}>
-                <Trash2 size={16} color={colors.error} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.aiItemContainer}>
-            <TouchableOpacity
-              style={[styles.aiButton, hasVideo && styles.aiButtonActive]}
-              onPress={generateVideo}
-              disabled={generatingVideo}
-            >
-              {generatingVideo ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : hasVideo ? (
-                <CheckCircle size={20} color="#FFFFFF" />
-              ) : (
-                <Play size={20} color={colors.textSecondary} />
-              )}
-              <Text style={[styles.aiButtonText, hasVideo && styles.aiButtonTextActive]}>
-                {generatingVideo ? 'Generating...' : hasVideo ? 'Video Generated' : 'Generate Video Intro'}
-              </Text>
-            </TouchableOpacity>
-            {hasVideo && (
-              <TouchableOpacity style={styles.deleteButton} onPress={deleteVideo}>
-                <Trash2 size={16} color={colors.error} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
       </View>
 
       <View style={styles.inputContainer}>
@@ -1225,43 +1152,6 @@ export default function CreateProject() {
       padding: 8,
       marginLeft: 4,
     },
-    aiContentContainer: {
-      gap: 12,
-    },
-    aiItemContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    aiButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingVertical: 16,
-    },
-    aiButtonActive: {
-      backgroundColor: colors.success,
-      borderColor: colors.success,
-    },
-    aiButtonText: {
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-      marginLeft: 8,
-    },
-    aiButtonTextActive: {
-      color: '#FFFFFF',
-    },
-    deleteButton: {
-      backgroundColor: colors.error + '20',
-      padding: 12,
-      borderRadius: 8,
-      marginLeft: 8,
-    },
     tagInputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1346,6 +1236,104 @@ export default function CreateProject() {
       color: '#FFFFFF',
       marginRight: 8,
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    previewModal: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      margin: 20,
+      maxHeight: '80%',
+      maxWidth: '90%',
+      minWidth: 300,
+    },
+    previewHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    previewTitle: {
+      fontSize: 18,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+      flex: 1,
+      marginRight: 16,
+    },
+    previewContent: {
+      padding: 20,
+      alignItems: 'center',
+    },
+    previewImage: {
+      width: 250,
+      height: 200,
+      borderRadius: 8,
+    },
+    pdfPreview: {
+      alignItems: 'center',
+      padding: 40,
+    },
+    pdfText: {
+      fontSize: 18,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+      marginTop: 16,
+    },
+    pdfSubtext: {
+      fontSize: 14,
+      fontFamily: 'Inter-Regular',
+      color: colors.textSecondary,
+      marginTop: 8,
+    },
+    filePreview: {
+      alignItems: 'center',
+      padding: 40,
+    },
+    fileType: {
+      fontSize: 14,
+      fontFamily: 'Inter-Regular',
+      color: colors.textSecondary,
+      marginTop: 8,
+    },
+    successModal: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 32,
+      margin: 20,
+      alignItems: 'center',
+      maxWidth: 350,
+    },
+    successTitle: {
+      fontSize: 24,
+      fontFamily: 'Inter-Bold',
+      color: colors.text,
+      textAlign: 'center',
+      marginTop: 16,
+      marginBottom: 12,
+    },
+    successMessage: {
+      fontSize: 16,
+      fontFamily: 'Inter-Regular',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    successLoader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    successLoaderText: {
+      fontSize: 14,
+      fontFamily: 'Inter-Medium',
+      color: colors.primary,
+      marginLeft: 8,
+    },
   });
 
   return (
@@ -1412,6 +1400,9 @@ export default function CreateProject() {
           </TouchableOpacity>
         )}
       </View>
+
+      {renderFilePreview()}
+      {renderSuccessModal()}
     </View>
   );
 }
