@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 
+export type UserRole = 'founder' | 'freelancer' | 'investor';
 export type UserTier = 'free' | 'pro';
 
 export interface UserProfile {
@@ -7,14 +8,20 @@ export interface UserProfile {
   email: string;
   full_name: string;
   avatar_url?: string;
-  tier: UserTier;
+  role: UserRole;
   bio?: string;
+  skills?: string[];
+  location?: string;
   website?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  is_verified: boolean;
+  subscription_tier: UserTier;
   created_at: string;
   updated_at: string;
 }
 
-export const signUp = async (email: string, password: string, fullName: string) => {
+export const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'founder') => {
   try {
     const { data, error } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
@@ -22,6 +29,7 @@ export const signUp = async (email: string, password: string, fullName: string) 
       options: {
         data: {
           full_name: fullName.trim(),
+          role,
         },
       },
     });

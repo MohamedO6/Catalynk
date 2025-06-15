@@ -8,41 +8,58 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, Sparkles, Share2, Crown } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withTiming,
+  interpolate,
+  runOnJS
+} from 'react-native-reanimated';
+import { Lightbulb, Users, DollarSign, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const onboardingData = [
   {
-    icon: Mic,
-    title: 'Create Professional Podcasts',
-    description: 'Generate high-quality podcast episodes using AI - no microphone or camera required.',
+    icon: Lightbulb,
+    title: 'Turn Ideas into Reality',
+    description: 'Connect with talented freelancers and passionate investors to bring your startup vision to life.',
+    color: '#F59E0B',
+  },
+  {
+    icon: Users,
+    title: 'AI-Powered Matching',
+    description: 'Our intelligent system matches you with the perfect collaborators based on skills, interests, and goals.',
+    color: '#3B82F6',
+  },
+  {
+    icon: DollarSign,
+    title: 'Secure Blockchain Funding',
+    description: 'Transparent, trustless funding through Algorand smart contracts with milestone-based releases.',
+    color: '#10B981',
   },
   {
     icon: Sparkles,
-    title: 'AI Script Generation',
-    description: 'Let AI write engaging scripts, then convert them to natural-sounding voiceovers with ElevenLabs.',
-  },
-  {
-    icon: Share2,
-    title: 'Video Introductions',
-    description: 'Create personalized video intros with AI avatars using Tavus technology.',
-  },
-  {
-    icon: Crown,
-    title: 'Publish as NFTs',
-    description: 'Mint your podcasts as NFTs on Algorand blockchain and build your custom podcast website.',
+    title: 'Voice & Video AI',
+    description: 'Generate compelling project pitches with AI voices and personalized video introductions.',
+    color: '#8B5CF6',
   },
 ];
 
 export default function Onboarding() {
   const { colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const slideX = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   const nextSlide = () => {
     if (currentIndex < onboardingData.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      opacity.value = withTiming(0, { duration: 200 }, () => {
+        runOnJS(setCurrentIndex)(currentIndex + 1);
+        opacity.value = withTiming(1, { duration: 300 });
+      });
     } else {
       router.push('/(auth)/welcome');
     }
@@ -51,6 +68,34 @@ export default function Onboarding() {
   const skip = () => {
     router.push('/(auth)/welcome');
   };
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+      transform: [
+        {
+          translateX: interpolate(
+            opacity.value,
+            [0, 1],
+            [50, 0]
+          )
+        }
+      ]
+    };
+  });
+
+  const iconAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: withSpring(opacity.value, {
+            damping: 15,
+            stiffness: 150,
+          })
+        }
+      ]
+    };
+  });
 
   const styles = StyleSheet.create({
     container: {
@@ -72,10 +117,17 @@ export default function Onboarding() {
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: colors.primary + '20',
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 40,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 10,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
     },
     title: {
       fontSize: 32,
@@ -89,7 +141,7 @@ export default function Onboarding() {
       fontFamily: 'Inter-Regular',
       color: colors.textSecondary,
       textAlign: 'center',
-      lineHeight: 24,
+      lineHeight: 26,
       marginBottom: 60,
     },
     buttonContainer: {
@@ -116,6 +168,14 @@ export default function Onboarding() {
       borderRadius: 25,
       minWidth: 120,
       alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
     },
     nextText: {
       fontSize: 16,
@@ -135,6 +195,7 @@ export default function Onboarding() {
     },
     activeDot: {
       backgroundColor: colors.primary,
+      width: 24,
     },
     inactiveDot: {
       backgroundColor: colors.border,
@@ -150,17 +211,22 @@ export default function Onboarding() {
         colors={[colors.background, colors.surface]}
         style={styles.gradient}
       >
-        <View style={styles.slideContainer}>
-          <View style={styles.iconContainer}>
-            <Icon size={60} color={colors.primary} />
-          </View>
+        <Animated.View style={[styles.slideContainer, animatedStyle]}>
+          <Animated.View style={[iconAnimatedStyle]}>
+            <LinearGradient
+              colors={[currentSlide.color + '20', currentSlide.color + '10']}
+              style={styles.iconContainer}
+            >
+              <Icon size={60} color={currentSlide.color} />
+            </LinearGradient>
+          </Animated.View>
           <Text style={styles.title}>{currentSlide.title}</Text>
           <Text style={styles.description}>{currentSlide.description}</Text>
-        </View>
+        </Animated.View>
 
         <View style={styles.dotsContainer}>
           {onboardingData.map((_, index) => (
-            <View
+            <Animated.View
               key={index}
               style={[
                 styles.dot,

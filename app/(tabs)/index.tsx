@@ -11,67 +11,81 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Plus, Play, TrendingUp, Users, Crown, Bell, Search, Mic, Video, Share2, Heart, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withDelay
+} from 'react-native-reanimated';
+import { Plus, TrendingUp, Users, Crown, Bell, Search, Zap, Play, Heart, Share2, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
-interface Episode {
+interface Project {
   id: string;
   title: string;
   description: string;
   creator: string;
-  duration: string;
-  plays: number;
-  likes: number;
+  category: string;
+  funding: number;
+  goal: number;
+  backers: number;
   image_url: string;
+  has_audio: boolean;
   has_video: boolean;
   created_at: string;
 }
 
 const mockStats = {
-  totalEpisodes: 1247,
-  totalPlays: 45632,
-  totalCreators: 892,
-  avgRating: 4.8,
+  totalProjects: 1247,
+  totalFunding: 4563200,
+  totalUsers: 8924,
+  avgSuccess: 78,
 };
 
-const mockTrendingEpisodes: Episode[] = [
+const mockTrendingProjects: Project[] = [
   {
     id: '1',
-    title: 'The Future of AI in Content Creation',
-    description: 'Exploring how artificial intelligence is revolutionizing the way we create and consume content.',
+    title: 'EcoTrack - Carbon Footprint Tracker',
+    description: 'AI-powered app that helps individuals and businesses track and reduce their carbon footprint through smart recommendations.',
     creator: 'Sarah Chen',
-    duration: '12:34',
-    plays: 2847,
-    likes: 234,
+    category: 'CleanTech',
+    funding: 125000,
+    goal: 200000,
+    backers: 89,
     image_url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+    has_audio: true,
     has_video: true,
     created_at: '2024-01-15',
   },
   {
     id: '2',
-    title: 'Building Sustainable Startups',
-    description: 'A deep dive into creating businesses that are both profitable and environmentally conscious.',
+    title: 'MindfulAI - Mental Health Assistant',
+    description: 'Personalized mental health support using AI to provide 24/7 emotional guidance and therapy recommendations.',
     creator: 'Marcus Johnson',
-    duration: '18:22',
-    plays: 1923,
-    likes: 189,
+    category: 'HealthTech',
+    funding: 89000,
+    goal: 150000,
+    backers: 156,
     image_url: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    has_video: false,
+    has_audio: false,
+    has_video: true,
     created_at: '2024-01-14',
   },
   {
     id: '3',
-    title: 'The Psychology of Decision Making',
-    description: 'Understanding the cognitive biases that influence our daily choices and how to overcome them.',
+    title: 'BlockLearn - Decentralized Education',
+    description: 'Blockchain-based learning platform that rewards students with tokens for completing courses and achieving milestones.',
     creator: 'Dr. Emily Rodriguez',
-    duration: '15:45',
-    plays: 3156,
-    likes: 298,
+    category: 'EdTech',
+    funding: 234000,
+    goal: 300000,
+    backers: 203,
     image_url: 'https://images.pexels.com/photos/3184293/pexels-photo-3184293.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
-    has_video: true,
+    has_audio: true,
+    has_video: false,
     created_at: '2024-01-13',
   },
 ];
@@ -79,26 +93,40 @@ const mockTrendingEpisodes: Episode[] = [
 export default function Home() {
   const { colors } = useTheme();
   const { profile } = useAuth();
-  const [likedEpisodes, setLikedEpisodes] = useState<string[]>([]);
+  const [likedProjects, setLikedProjects] = useState<string[]>([]);
 
-  const handleCreateEpisode = () => {
-    router.push('/create-episode');
+  const headerOpacity = useSharedValue(0);
+  const statsOpacity = useSharedValue(0);
+  const projectsOpacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    headerOpacity.value = withSpring(1);
+    statsOpacity.value = withDelay(200, withSpring(1));
+    projectsOpacity.value = withDelay(400, withSpring(1));
+  }, []);
+
+  const handleCreateProject = () => {
+    router.push('/create-project');
   };
 
-  const handlePlayEpisode = (episodeId: string) => {
-    Alert.alert('Playing Episode', 'Episode player would open here with audio/video playback.');
+  const handlePlayAudio = (projectId: string) => {
+    Alert.alert('Playing Audio', 'AI-generated pitch audio would play here.');
   };
 
-  const handleLikeEpisode = (episodeId: string) => {
-    setLikedEpisodes(prev =>
-      prev.includes(episodeId)
-        ? prev.filter(id => id !== episodeId)
-        : [...prev, episodeId]
+  const handlePlayVideo = (projectId: string) => {
+    Alert.alert('Playing Video', 'AI-generated video introduction would play here.');
+  };
+
+  const handleLikeProject = (projectId: string) => {
+    setLikedProjects(prev =>
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
     );
   };
 
-  const handleShareEpisode = (episodeId: string) => {
-    Alert.alert('Share Episode', 'Episode link copied to clipboard!');
+  const handleShareProject = (projectId: string) => {
+    Alert.alert('Share Project', 'Project link copied to clipboard!');
   };
 
   const handleUpgrade = () => {
@@ -118,6 +146,31 @@ export default function Home() {
       return num.toString();
     }
   };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `$${amount.toLocaleString()}`;
+    }
+  };
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: (1 - headerOpacity.value) * 20 }],
+  }));
+
+  const statsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: statsOpacity.value,
+    transform: [{ translateY: (1 - statsOpacity.value) * 30 }],
+  }));
+
+  const projectsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: projectsOpacity.value,
+    transform: [{ translateY: (1 - projectsOpacity.value) * 40 }],
+  }));
 
   const styles = StyleSheet.create({
     container: {
@@ -190,6 +243,14 @@ export default function Home() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
     },
     secondaryActionButton: {
       flex: 1,
@@ -226,11 +287,19 @@ export default function Home() {
     statCard: {
       width: (width - 50) / 2,
       backgroundColor: colors.card,
-      borderRadius: 12,
+      borderRadius: 16,
       padding: 16,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     statValue: {
       fontSize: 24,
@@ -267,71 +336,62 @@ export default function Home() {
       fontFamily: 'Inter-Medium',
       color: colors.primary,
     },
-    episodeCard: {
+    projectCard: {
       backgroundColor: colors.card,
       borderRadius: 16,
       marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 5,
     },
-    episodeImage: {
+    projectImage: {
       width: '100%',
       height: 160,
       position: 'relative',
     },
-    playOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    playButton: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    videoBadge: {
+    mediaOverlay: {
       position: 'absolute',
       top: 12,
       right: 12,
-      backgroundColor: colors.error,
+      flexDirection: 'row',
+    },
+    mediaBadge: {
+      backgroundColor: 'rgba(0,0,0,0.7)',
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
+      marginLeft: 4,
     },
-    videoBadgeText: {
+    mediaBadgeText: {
       fontSize: 10,
       fontFamily: 'Inter-Bold',
       color: '#FFFFFF',
-      marginLeft: 4,
     },
-    episodeContent: {
+    projectContent: {
       padding: 16,
     },
-    episodeHeader: {
+    projectHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       marginBottom: 8,
     },
-    episodeTitle: {
+    projectTitle: {
       fontSize: 18,
       fontFamily: 'Inter-Bold',
       color: colors.text,
       flex: 1,
       marginRight: 12,
     },
-    episodeActions: {
+    projectActions: {
       flexDirection: 'row',
       alignItems: 'center',
     },
@@ -339,20 +399,61 @@ export default function Home() {
       padding: 6,
       marginLeft: 8,
     },
-    episodeCreator: {
+    projectCreator: {
       fontSize: 14,
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
       marginBottom: 8,
     },
-    episodeDescription: {
+    projectDescription: {
       fontSize: 15,
       fontFamily: 'Inter-Regular',
       color: colors.textSecondary,
       lineHeight: 22,
       marginBottom: 12,
     },
-    episodeStats: {
+    projectMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    categoryBadge: {
+      backgroundColor: colors.primary + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    categoryText: {
+      fontSize: 12,
+      fontFamily: 'Inter-Bold',
+      color: colors.primary,
+    },
+    fundingInfo: {
+      alignItems: 'flex-end',
+    },
+    fundingAmount: {
+      fontSize: 16,
+      fontFamily: 'Inter-Bold',
+      color: colors.success,
+    },
+    fundingProgress: {
+      fontSize: 12,
+      fontFamily: 'Inter-Medium',
+      color: colors.textSecondary,
+    },
+    progressBar: {
+      height: 4,
+      backgroundColor: colors.border,
+      borderRadius: 2,
+      marginBottom: 8,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.success,
+      borderRadius: 2,
+    },
+    projectStats: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -367,28 +468,23 @@ export default function Home() {
       color: colors.textSecondary,
       marginLeft: 4,
     },
-    duration: {
-      fontSize: 14,
-      fontFamily: 'Inter-SemiBold',
-      color: colors.primary,
-    },
   });
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[colors.primary + '10', colors.background]}
+        colors={[colors.primary + '08', colors.background]}
         style={styles.header}
       >
-        <View style={styles.headerTop}>
+        <Animated.View style={[styles.headerTop, headerAnimatedStyle]}>
           <View style={styles.greeting}>
             <Text style={styles.title}>Welcome back!</Text>
             <Text style={styles.subtitle}>
-              Ready to create your next podcast episode?
+              Ready to turn your next idea into reality?
             </Text>
           </View>
           <View style={styles.headerActions}>
-            {profile?.tier === 'free' && (
+            {profile?.subscription_tier === 'free' && (
               <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
                 <Crown size={16} color={colors.warning} />
                 <Text style={styles.upgradeText}>Upgrade</Text>
@@ -398,13 +494,13 @@ export default function Home() {
               <Bell size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </LinearGradient>
 
       <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateEpisode}>
+        <TouchableOpacity style={styles.quickActionButton} onPress={handleCreateProject}>
           <Plus size={20} color="#FFFFFF" />
-          <Text style={styles.quickActionText}>Create Episode</Text>
+          <Text style={styles.quickActionText}>Create Project</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryActionButton}>
           <Search size={20} color={colors.text} />
@@ -413,69 +509,74 @@ export default function Home() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.statsContainer}>
+        <Animated.View style={[styles.statsContainer, statsAnimatedStyle]}>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatNumber(mockStats.totalEpisodes)}</Text>
-              <Text style={styles.statLabel}>Total Episodes</Text>
+              <Text style={styles.statValue}>{formatNumber(mockStats.totalProjects)}</Text>
+              <Text style={styles.statLabel}>Active Projects</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatNumber(mockStats.totalPlays)}</Text>
-              <Text style={styles.statLabel}>Total Plays</Text>
+              <Text style={styles.statValue}>{formatCurrency(mockStats.totalFunding)}</Text>
+              <Text style={styles.statLabel}>Total Funding</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatNumber(mockStats.totalCreators)}</Text>
-              <Text style={styles.statLabel}>Creators</Text>
+              <Text style={styles.statValue}>{formatNumber(mockStats.totalUsers)}</Text>
+              <Text style={styles.statLabel}>Community</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{mockStats.avgRating}</Text>
-              <Text style={styles.statLabel}>Avg Rating</Text>
+              <Text style={styles.statValue}>{mockStats.avgSuccess}%</Text>
+              <Text style={styles.statLabel}>Success Rate</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, projectsAnimatedStyle]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Episodes</Text>
+            <Text style={styles.sectionTitle}>Trending Projects</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
 
-          {mockTrendingEpisodes.map((episode) => {
-            const isLiked = likedEpisodes.includes(episode.id);
+          {mockTrendingProjects.map((project) => {
+            const isLiked = likedProjects.includes(project.id);
+            const progress = Math.round((project.funding / project.goal) * 100);
             
             return (
               <TouchableOpacity 
-                key={episode.id} 
-                style={styles.episodeCard}
-                onPress={() => handlePlayEpisode(episode.id)}
+                key={project.id} 
+                style={styles.projectCard}
+                onPress={() => router.push(`/project/${project.id}`)}
               >
-                <View style={styles.episodeImage}>
-                  <Image source={{ uri: episode.image_url }} style={styles.episodeImage} />
-                  <View style={styles.playOverlay}>
-                    <TouchableOpacity 
-                      style={styles.playButton}
-                      onPress={() => handlePlayEpisode(episode.id)}
-                    >
-                      <Play size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
+                <View style={styles.projectImage}>
+                  <Image source={{ uri: project.image_url }} style={styles.projectImage} />
+                  <View style={styles.mediaOverlay}>
+                    {project.has_audio && (
+                      <TouchableOpacity 
+                        style={styles.mediaBadge}
+                        onPress={() => handlePlayAudio(project.id)}
+                      >
+                        <Text style={styles.mediaBadgeText}>🎵 AUDIO</Text>
+                      </TouchableOpacity>
+                    )}
+                    {project.has_video && (
+                      <TouchableOpacity 
+                        style={styles.mediaBadge}
+                        onPress={() => handlePlayVideo(project.id)}
+                      >
+                        <Text style={styles.mediaBadgeText}>🎥 VIDEO</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  {episode.has_video && (
-                    <View style={styles.videoBadge}>
-                      <Video size={12} color="#FFFFFF" />
-                      <Text style={styles.videoBadgeText}>VIDEO</Text>
-                    </View>
-                  )}
                 </View>
                 
-                <View style={styles.episodeContent}>
-                  <View style={styles.episodeHeader}>
-                    <Text style={styles.episodeTitle}>{episode.title}</Text>
-                    <View style={styles.episodeActions}>
+                <View style={styles.projectContent}>
+                  <View style={styles.projectHeader}>
+                    <Text style={styles.projectTitle}>{project.title}</Text>
+                    <View style={styles.projectActions}>
                       <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => handleLikeEpisode(episode.id)}
+                        onPress={() => handleLikeProject(project.id)}
                       >
                         <Heart
                           size={20}
@@ -485,7 +586,7 @@ export default function Home() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => handleShareEpisode(episode.id)}
+                        onPress={() => handleShareProject(project.id)}
                       >
                         <Share2 size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -495,27 +596,45 @@ export default function Home() {
                     </View>
                   </View>
 
-                  <Text style={styles.episodeCreator}>by {episode.creator}</Text>
-                  <Text style={styles.episodeDescription} numberOfLines={2}>
-                    {episode.description}
+                  <Text style={styles.projectCreator}>by {project.creator}</Text>
+                  <Text style={styles.projectDescription} numberOfLines={2}>
+                    {project.description}
                   </Text>
 
-                  <View style={styles.episodeStats}>
+                  <View style={styles.projectMeta}>
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryText}>{project.category}</Text>
+                    </View>
+                    <View style={styles.fundingInfo}>
+                      <Text style={styles.fundingAmount}>{formatCurrency(project.funding)}</Text>
+                      <Text style={styles.fundingProgress}>of {formatCurrency(project.goal)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${Math.min(progress, 100)}%` },
+                      ]}
+                    />
+                  </View>
+
+                  <View style={styles.projectStats}>
                     <View style={styles.statItem}>
-                      <Play size={14} color={colors.textSecondary} />
-                      <Text style={styles.statText}>{formatNumber(episode.plays)}</Text>
+                      <TrendingUp size={14} color={colors.textSecondary} />
+                      <Text style={styles.statText}>{progress}% funded</Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Heart size={14} color={colors.textSecondary} />
-                      <Text style={styles.statText}>{formatNumber(episode.likes)}</Text>
+                      <Users size={14} color={colors.textSecondary} />
+                      <Text style={styles.statText}>{project.backers} backers</Text>
                     </View>
-                    <Text style={styles.duration}>{episode.duration}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

@@ -10,7 +10,14 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, Github, Chrome } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withDelay,
+  runOnJS
+} from 'react-native-reanimated';
+import { Zap, Github, Chrome, Linkedin } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -18,15 +25,39 @@ const { width } = Dimensions.get('window');
 export default function Welcome() {
   const { colors } = useTheme();
   const [loading, setLoading] = useState<string | null>(null);
+  
+  const logoScale = useSharedValue(0);
+  const titleOpacity = useSharedValue(0);
+  const buttonsOpacity = useSharedValue(0);
 
-  const handleSocialSignIn = async (provider: 'google' | 'github') => {
+  React.useEffect(() => {
+    logoScale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    titleOpacity.value = withDelay(300, withSpring(1));
+    buttonsOpacity.value = withDelay(600, withSpring(1));
+  }, []);
+
+  const handleSocialSignIn = async (provider: 'google' | 'github' | 'linkedin') => {
     setLoading(provider);
     // Simulate OAuth flow
     setTimeout(() => {
       setLoading(null);
-      router.replace('/(tabs)');
+      router.replace('/(auth)/role-selection');
     }, 2000);
   };
+
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+  }));
+
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: (1 - titleOpacity.value) * 20 }],
+  }));
+
+  const buttonsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: buttonsOpacity.value,
+    transform: [{ translateY: (1 - buttonsOpacity.value) * 30 }],
+  }));
 
   const styles = StyleSheet.create({
     container: {
@@ -46,26 +77,34 @@ export default function Welcome() {
       marginBottom: 60,
     },
     logo: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
+      width: 120,
+      height: 120,
+      borderRadius: 60,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 20,
+      marginBottom: 30,
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 10,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 15,
     },
     appName: {
-      fontSize: 42,
+      fontSize: 48,
       fontFamily: 'Inter-Bold',
       color: colors.text,
       textAlign: 'center',
+      marginBottom: 8,
     },
     tagline: {
-      fontSize: 18,
+      fontSize: 20,
       fontFamily: 'Inter-Medium',
       color: colors.textSecondary,
       textAlign: 'center',
-      marginTop: 8,
     },
     buttonsContainer: {
       marginTop: 60,
@@ -73,9 +112,17 @@ export default function Welcome() {
     primaryButton: {
       backgroundColor: colors.primary,
       paddingVertical: 18,
-      borderRadius: 12,
+      borderRadius: 16,
       marginBottom: 16,
       alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
     },
     primaryButtonText: {
       fontSize: 18,
@@ -87,8 +134,8 @@ export default function Welcome() {
       borderWidth: 2,
       borderColor: colors.border,
       paddingVertical: 16,
-      borderRadius: 12,
-      marginBottom: 24,
+      borderRadius: 16,
+      marginBottom: 32,
       alignItems: 'center',
     },
     secondaryButtonText: {
@@ -120,8 +167,16 @@ export default function Welcome() {
       borderWidth: 1,
       borderColor: colors.border,
       paddingVertical: 16,
-      borderRadius: 12,
+      borderRadius: 16,
       marginBottom: 12,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     socialButtonDisabled: {
       opacity: 0.6,
@@ -141,13 +196,14 @@ export default function Welcome() {
       fontFamily: 'Inter-Regular',
       color: colors.textTertiary,
       textAlign: 'center',
+      lineHeight: 20,
     },
   });
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[colors.background, colors.surface]}
+        colors={[colors.primary + '05', colors.background]}
         style={styles.gradient}
       >
         <ScrollView
@@ -155,14 +211,16 @@ export default function Welcome() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <Mic size={50} color="#FFFFFF" />
-            </View>
-            <Text style={styles.appName}>PodSnap</Text>
-            <Text style={styles.tagline}>AI-Powered Podcast Creation</Text>
+            <Animated.View style={[styles.logo, logoAnimatedStyle]}>
+              <Zap size={60} color="#FFFFFF" />
+            </Animated.View>
+            <Animated.View style={titleAnimatedStyle}>
+              <Text style={styles.appName}>Catalynk</Text>
+              <Text style={styles.tagline}>Where Innovation Meets Opportunity</Text>
+            </Animated.View>
           </View>
 
-          <View style={styles.buttonsContainer}>
+          <Animated.View style={[styles.buttonsContainer, buttonsAnimatedStyle]}>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.push('/(auth)/signup')}
@@ -218,7 +276,25 @@ export default function Welcome() {
                 {loading === 'github' ? 'Connecting...' : 'Continue with GitHub'}
               </Text>
             </TouchableOpacity>
-          </View>
+
+            <TouchableOpacity 
+              style={[
+                styles.socialButton,
+                loading === 'linkedin' && styles.socialButtonDisabled
+              ]}
+              onPress={() => handleSocialSignIn('linkedin')}
+              disabled={loading === 'linkedin'}
+            >
+              {loading === 'linkedin' ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <Linkedin size={24} color={colors.text} />
+              )}
+              <Text style={styles.socialButtonText}>
+                {loading === 'linkedin' ? 'Connecting...' : 'Continue with LinkedIn'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>

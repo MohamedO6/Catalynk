@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Chrome as Home, Mic, MessageCircle, User } from 'lucide-react-native';
+import { Home, Briefcase, MessageCircle, User, Gamepad2 } from 'lucide-react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -36,11 +36,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="create"
+        name="projects"
         options={{
-          title: 'Create',
+          title: 'Projects',
           tabBarIcon: ({ size, color }) => (
-            <Mic size={size} color={color} />
+            <Briefcase size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="game"
+        options={{
+          title: 'Pitch or Ditch',
+          tabBarIcon: ({ size, color }) => (
+            <Gamepad2 size={size} color={color} />
           ),
         }}
       />
